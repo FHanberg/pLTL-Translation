@@ -1,11 +1,11 @@
-package PLTL.Past;
+package PLTL.Future;
 
 import PLTL.Binary;
-import PLTL.Future.M;
 import PLTL.PLTLExp;
 
-public class Before extends Binary {
-    public Before(PLTLExp left, PLTLExp right) {
+//Yes, this is operator "W"
+public class WUntil extends Binary {
+    public WUntil(PLTLExp left, PLTLExp right) {
         super(left, right);
     }
 
@@ -19,13 +19,13 @@ public class Before extends Binary {
         if(obj == null){
             return false;
         }
-        if(!(obj instanceof Before)){
+        if(!(obj instanceof WUntil)){
             return false;
         }
-        if(!((Before) obj).getLeft().equals(this.getLeft())){
+        if(!((WUntil) obj).getLeft().equals(this.getLeft())){
             return false;
         }
-        if(!((Before) obj).getRight().equals(this.getRight())){
+        if(!((WUntil) obj).getRight().equals(this.getRight())){
             return false;
         }
         return true;

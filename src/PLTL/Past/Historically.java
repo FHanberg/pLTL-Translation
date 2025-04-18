@@ -1,11 +1,10 @@
 package PLTL.Past;
 
-import PLTL.Future.Future;
 import PLTL.PLTLExp;
 import PLTL.Unary;
 
-public class Once extends Unary {
-    public Once(PLTLExp target) {
+public class Historically extends Unary {
+    public Historically(PLTLExp target) {
         super(target);
     }
 
@@ -19,10 +18,10 @@ public class Once extends Unary {
         if(obj == null){
             return false;
         }
-        if(!(obj instanceof Once)){
+        if(!(obj instanceof Historically)){
             return false;
         }
-        if(!((Once) obj).getTarget().equals(this.getTarget())){
+        if(!((Historically) obj).getTarget().equals(this.getTarget())){
             return false;
         }
         return true;

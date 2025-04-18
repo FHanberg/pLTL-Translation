@@ -1,11 +1,10 @@
 package PLTL.Past;
 
 import PLTL.Binary;
-import PLTL.Future.M;
 import PLTL.PLTLExp;
 
-public class WBefore extends Binary {
-    public WBefore(PLTLExp left, PLTLExp right) {
+public class Before extends Binary {
+    public Before(PLTLExp left, PLTLExp right) {
         super(left, right);
     }
 
@@ -19,13 +18,13 @@ public class WBefore extends Binary {
         if(obj == null){
             return false;
         }
-        if(!(obj instanceof WBefore)){
+        if(!(obj instanceof Before)){
             return false;
         }
-        if(!((WBefore) obj).getLeft().equals(this.getLeft())){
+        if(!((Before) obj).getLeft().equals(this.getLeft())){
             return false;
         }
-        if(!((WBefore) obj).getRight().equals(this.getRight())){
+        if(!((Before) obj).getRight().equals(this.getRight())){
             return false;
         }
         return true;

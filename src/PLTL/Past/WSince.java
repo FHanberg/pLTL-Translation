@@ -1,7 +1,6 @@
 package PLTL.Past;
 
 import PLTL.Binary;
-import PLTL.Future.M;
 import PLTL.PLTLExp;
 
 public class WSince extends Binary {

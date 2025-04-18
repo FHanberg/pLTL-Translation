@@ -2,7 +2,7 @@ package PLTL;
 
 public class True extends PLTLExp{
     @Override
-    public <R> R accept(Visitor<R> v) {
+    public <R> R accept(PLTLExp.Visitor<R> v) {
         return v.visit(this);
     }
 

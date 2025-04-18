@@ -4,7 +4,7 @@ import PLTL.Past.*;
 
 import java.util.HashSet;
 
-public class Main {
+public class main {
 
     public static void main(String[] args) {
         //Initialization

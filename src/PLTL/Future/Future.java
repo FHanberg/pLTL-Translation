@@ -1,6 +1,5 @@
 package PLTL.Future;
 
-import PLTL.Not;
 import PLTL.PLTLExp;
 
 public class Future extends PLTL.Unary {
