@@ -6,6 +6,7 @@ public abstract class Unary extends PLTLExp{
     PLTLExp m_target;
 
     public Unary(PLTLExp target){
+        super();
         m_target = target;
     }
 

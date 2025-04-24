@@ -5,10 +5,12 @@ import PLTL.Past.*;
 
 //Main abstract class for formulas
 public abstract class PLTLExp {
+    public int transitionLabel;
     public int label;
 
     public PLTLExp(){
         label = -1;
+        transitionLabel = -1;
     }
 
     public abstract <R> R accept(Visitor<R> v);

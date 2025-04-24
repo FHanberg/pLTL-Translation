@@ -6,6 +6,7 @@ public abstract class Binary extends PLTLExp {
     PLTLExp m_right;
 
     public Binary(PLTLExp left, PLTLExp right){
+        super();
         m_left = left;
         m_right = right;
     }

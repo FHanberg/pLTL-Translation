@@ -3,6 +3,7 @@ import PLTL.Future.*;
 import PLTL.Past.*;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 
 public class main {
 
@@ -11,7 +12,7 @@ public class main {
         int stateLabel = 0;
 
         //The PLTL statement to be translated
-        PLTLExp test = new Next(new Until(new Not(new Term("0")), new Term("1")));
+        PLTLExp test = new Next(new Until(new Term("0"), new Term("1")));
 
         System.out.println("Provided formula:");
         //Initial conversion to NNF + console readout
@@ -24,9 +25,9 @@ public class main {
         System.out.println("");
 
         //Primary state output
-        HashSet<NBAState> mainSet = new HashSet<>();
+        LinkedList<NBAState> mainSet = new LinkedList<>();
         //Primary transition output
-        HashSet<NBATransition> transitionSet = new HashSet<>();
+        LinkedList<NBATransition> transitionSet = new LinkedList<>();
         //marks current states to be translated
         HashSet<NBAState> currentSet = new HashSet<>();
 
@@ -57,13 +58,28 @@ public class main {
                         next.setLabel(stateLabel);
                         nextSet.add(next);
                         mainSet.add(next);
-                        HashSet<Integer> transLabels = next.m_exp.accept(new transitionLabel());
+
+                        //Labels are added if their corresponding U/M are NOT present
+                        HashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
+                        HashSet<Integer> transLabels = new HashSet<>();
+                        for(int i = 0 ; i < t.getTransitionLabels(); i++){
+                            if(!antiLabels.contains(i)){
+                                transLabels.add(i);
+                            }
+                        }
                         transitionSet.add(new NBATransition(curLabel, stateLabel, transLabels));
                         stateLabel += 1;
                         //If the state has been created before, add a new transition if necessary
                     }else if(!transitionRepeat(new NBATransition(curLabel, equalLabel), transitionSet)){
                         if(curLabel == equalLabel){
-                            HashSet<Integer> transLabels = next.m_exp.accept(new transitionLabel());
+                            //Labels are added if their corresponding U/M are NOT present
+                            HashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
+                            HashSet<Integer> transLabels = new HashSet<>();
+                            for(int i = 0 ; i < t.getTransitionLabels(); i++){
+                                if(!antiLabels.contains(i)){
+                                    transLabels.add(i);
+                                }
+                            }
                             transitionSet.add(new NBATransition(curLabel, equalLabel, transLabels));
                         }
                     }
@@ -73,6 +89,7 @@ public class main {
             currentSet = nextSet;
         }
         //Write information about the set to the console
+        transitionSet.sort(NBATransition.comp);
         readout(mainSet, transitionSet);
     }
 
@@ -80,7 +97,7 @@ public class main {
     /*
     Print information about a completed Büchi-automata
     */
-    static public void readout(HashSet<NBAState> states, HashSet<NBATransition> trans){
+    static public void readout(LinkedList<NBAState> states, LinkedList<NBATransition> trans){
         System.out.println("total number of states: " + states.size());
         for(NBAState state : states){
             System.out.print("State " + state.getLabel() + ": ");
@@ -102,7 +119,7 @@ public class main {
     }
 
     /*
-    Return all labels to be applied to a transition.
+    Return all labels to not be applied to a transition.
      */
     public static class transitionLabel implements PLTLExp.Visitor<HashSet<Integer>>{
 
@@ -158,7 +175,7 @@ public class main {
             HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
             HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
-            left.add(exp.label);
+            left.add(exp.transitionLabel);
             return left;
         }
 
@@ -175,7 +192,7 @@ public class main {
             HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
             HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
-            left.add(exp.label);
+            left.add(exp.transitionLabel);
             return left;
         }
 
@@ -253,7 +270,7 @@ public class main {
     /*
     Check if a transition already exists in a given set.
      */
-    static public boolean transitionRepeat(NBATransition target, HashSet<NBATransition> set){
+    static public boolean transitionRepeat(NBATransition target, LinkedList<NBATransition> set){
         for(NBATransition t : set){
             if(t.equals(target))
                 return true;
@@ -265,7 +282,7 @@ public class main {
     Checks if a state already exists in a set, and returns its label if so.
     otherwise returns -1.
      */
-    static public int getLabelOfEqual(NBAState target, HashSet<NBAState> set){
+    static public int getLabelOfEqual(NBAState target, LinkedList<NBAState> set){
         for(NBAState node : set){
             if(target.equals(node))
                 return node.getLabel();

@@ -18,6 +18,10 @@ public class Translator {
         transitionLabels = 0;
     }
 
+    public int getTransitionLabels(){
+        return transitionLabels;
+    }
+
     public HashSet<NBAState> translationStep(NBAState base){
         pastLabels = 0;
         HashSet<NBAState> result = new HashSet<>();
@@ -82,10 +86,7 @@ public class Translator {
     HashSet<PLTLExp> primeImplicants(PLTLExp exp){
         HashSet<PLTLExp> result = new HashSet<>();
 
-        if(exp instanceof And){
-            result.add(((And) exp).getLeft());
-            result.add(((And) exp).getRight());
-        }else if(exp instanceof Or){
+        if(exp instanceof Or){
             result.addAll(primeImplicants(((Or) exp).getLeft()));
             result.addAll(primeImplicants(((Or) exp).getRight()));
         }else{
@@ -95,7 +96,7 @@ public class Translator {
         return result;
     }
 
-    //Not set up as a visitor since
+
     void setupLabels(PLTLExp exp){
 
         if(exp instanceof Unary){
@@ -111,8 +112,8 @@ public class Translator {
                 exp.label = pastLabels;
                 pastLabels +=1;
             }else if(exp instanceof Until || exp instanceof M){
-                if(exp.label == -1){
-                    exp.label = transitionLabels;
+                if(exp.transitionLabel == -1){
+                    exp.transitionLabel = transitionLabels;
                     transitionLabels += 1;
                 }
             }else{
@@ -217,7 +218,8 @@ public class Translator {
 
         @Override
         public PLTLExp visit(Until exp) {
-            return new Or(exp.getRight().accept(new LocalAfter()), new And(exp.getLeft().accept(new LocalAfter()), postUpdate(exp)));
+            PLTLExp right = exp.getRight().accept(new LocalAfter());
+            return new Or(right, new And(exp.getLeft().accept(new LocalAfter()), postUpdate(exp)));
         }
         @Override
         public PLTLExp visit(WUntil exp) {
@@ -350,7 +352,7 @@ public class Translator {
         @Override
         public PLTLExp visit(Until exp) {
             Until newExp = new Until(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
-            newExp.label = exp.label;
+            newExp.transitionLabel = exp.transitionLabel;
             return newExp;
         }
 
@@ -362,7 +364,7 @@ public class Translator {
         @Override
         public PLTLExp visit(M exp) {
             M newExp = new M(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
-            newExp.label = exp.label;
+            newExp.transitionLabel = exp.transitionLabel;
             return newExp;
         }
 

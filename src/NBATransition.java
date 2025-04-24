@@ -1,3 +1,4 @@
+import java.util.Comparator;
 import java.util.HashSet;
 
 public class NBATransition {
@@ -34,4 +35,20 @@ public class NBATransition {
         }
         return false;
     }
+
+    static public Comparator<NBATransition> comp = (o1, o2) -> {
+        if(o1.m_from == o2.m_from){
+            if(o1.m_to == o2.m_to){
+                return 0;
+            }
+            if(o1.m_to < o2.m_to){
+                return -1;
+            }
+            return 1;
+        }
+        if(o1.m_from < o2.m_from){
+            return -1;
+        }
+        return 1;
+    };
 }
