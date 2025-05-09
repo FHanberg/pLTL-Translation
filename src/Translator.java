@@ -2,7 +2,9 @@ import PLTL.*;
 import PLTL.Future.*;
 import PLTL.Past.*;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 
 public class Translator {
     //counters for labeling purposes
@@ -22,20 +24,22 @@ public class Translator {
         return transitionLabels;
     }
 
-    public HashSet<NBAState> translationStep(NBAState base){
+    public HashSet<NBAState> translationStep(NBAState base, LinkedList<String> atomList){
         pastLabels = 0;
         HashSet<NBAState> result = new HashSet<>();
         setupLabels(base.getExp());
-        HashSet<HashSet<Integer>> subsets = getAllSubsets(pastLabels, 0, new HashSet<>());
-        for (HashSet<Integer> C: subsets) {
+        HashSet<HashSet<String>> valuations = getAllValuations(atomList, 0, new HashSet<>());
+        for(HashSet<Integer> C : getAllSubsets(pastLabels, 0, new HashSet<>())) {
             WC = new HashSet<>();
             toWeaken = C;
             setWC(base.getExp(), C);
-            PLTLExp current = base.getExp().accept(new LocalAfter());
-            PLTLExp rewritten = current.accept(new DNF());
-            HashSet<PLTLExp> implicants = primeImplicants(rewritten);
-            for (PLTLExp exp: implicants) {
-                result.add(new NBAState(trueFalseTrim(exp)));
+            for (HashSet<String> valuation : valuations) {
+                PLTLExp current = base.getExp().accept(new LocalAfter(), valuation);
+                PLTLExp rewritten = current.accept(new DNF());
+                HashSet<PLTLExp> implicants = primeImplicants(rewritten);
+                for (PLTLExp exp : implicants) {
+                    result.add(new NBAState(trueFalseTrim(exp), valuation));
+                }
             }
         }
 
@@ -103,15 +107,17 @@ public class Translator {
             if(exp instanceof Yesterday || exp instanceof WYesterday){
                 exp.label = pastLabels;
                 pastLabels +=1;
+                setupLabels(((Unary) exp).getTarget());
             }else{
                 exp.label = -1;
+                setupLabels(((Unary) exp).getTarget());
             }
-            setupLabels(((Unary) exp).getTarget());
+
         }else if(exp instanceof Binary){
-            if(exp instanceof Since || exp instanceof WSince|| exp instanceof Before || exp instanceof WBefore){
+            if (exp instanceof Since || exp instanceof WSince || exp instanceof Before || exp instanceof WBefore) {
                 exp.label = pastLabels;
                 pastLabels +=1;
-            }else if(exp instanceof Until || exp instanceof M){
+            } else if(exp instanceof Until || exp instanceof M){
                 if(exp.transitionLabel == -1){
                     exp.transitionLabel = transitionLabels;
                     transitionLabels += 1;
@@ -123,6 +129,19 @@ public class Translator {
             setupLabels(((Binary)exp).getRight());
         }
 
+    }
+
+    public HashSet<HashSet<String>> getAllValuations(LinkedList<String> atoms, int index, HashSet<String> current){
+        HashSet<HashSet<String>> result = new HashSet<>();
+        if(index != atoms.size()){
+            HashSet<String> add = new HashSet<>(current);
+            add.add(atoms.get(index));
+            result.addAll(getAllValuations(atoms, index + 1, add));
+            HashSet<String> stay = new HashSet<>(current);
+            result.addAll(getAllValuations(atoms, index + 1, stay));
+        }
+        result.add(current);
+        return result;
     }
 
     public HashSet<HashSet<Integer>> getAllSubsets(int length, int index, HashSet<Integer> current){
@@ -163,140 +182,147 @@ public class Translator {
         }
     }
 
-    class LocalAfter implements PLTLExp.Visitor<PLTLExp>{
+    class LocalAfter implements PLTLExp.AltVisitor<PLTLExp, HashSet<String>>{
 
         @Override
-        public PLTLExp visit(And exp) {
-            PLTLExp left = exp.getLeft().accept(new LocalAfter());
-            PLTLExp right = exp.getRight().accept(new LocalAfter());
+        public PLTLExp visit(And exp, HashSet<String> args) {
+            PLTLExp left = exp.getLeft().accept(new LocalAfter(), args);
+            PLTLExp right = exp.getRight().accept(new LocalAfter(), args);
 
             return new And(left, right);
         }
 
         @Override
-        public PLTLExp visit(Or exp) {
+        public PLTLExp visit(Or exp, HashSet<String> args) {
 
-            PLTLExp left = exp.getLeft().accept(new LocalAfter());
-            PLTLExp right = exp.getRight().accept(new LocalAfter());
+            PLTLExp left = exp.getLeft().accept(new LocalAfter(), args);
+            PLTLExp right = exp.getRight().accept(new LocalAfter(), args);
 
             return new Or(left, right);
         }
 
 
         @Override
-        public PLTLExp visit(Term exp) {
-            return exp;
-        }
-
-        @Override
-        public PLTLExp visit(NotTerm exp) {
-            return exp;
-        }
-
-
-        @Override
-        public PLTLExp visit(True exp) {
-            return exp;
-        }
-
-        @Override
-        public PLTLExp visit(False exp) {
-            return exp;
-        }
-
-
-        @Override
-        public PLTLExp visit(Globally exp) {
-            return null;
-        }
-
-        @Override
-        public PLTLExp visit(Historically exp) {
-            return null;
-        } //Should not be reached
-
-
-        @Override
-        public PLTLExp visit(Until exp) {
-            PLTLExp right = exp.getRight().accept(new LocalAfter());
-            return new Or(right, new And(exp.getLeft().accept(new LocalAfter()), postUpdate(exp)));
-        }
-        @Override
-        public PLTLExp visit(WUntil exp) {
-            return new Or(exp.getRight().accept(new LocalAfter()), new And(exp.getLeft().accept(new LocalAfter()), postUpdate(exp)));
-        }
-
-        @Override
-        public PLTLExp visit(M exp) {
-            return new And(exp.getRight().accept(new LocalAfter()), new Or(exp.getLeft().accept(new LocalAfter()), postUpdate(exp)));
-        }
-
-
-        @Override
-        public PLTLExp visit(Future exp) {
-            return null;
-        }
-
-        @Override
-        public PLTLExp visit(Once exp) {
-            return null;
-        }
-
-
-        @Override
-        public PLTLExp visit(Next exp) {
-            return postUpdate(exp.getTarget());
-        }
-
-        @Override
-        public PLTLExp visit(Yesterday exp) {
+        public PLTLExp visit(Term exp, HashSet<String> args) {
+            if(args.contains(exp.m_term))
+                return new True();
             return new False();
         }
 
         @Override
-        public PLTLExp visit(WYesterday exp) {
+        public PLTLExp visit(NotTerm exp, HashSet<String> args) {
+            if(args.contains(exp.m_term))
+                return new False();
             return new True();
         }
 
 
         @Override
-        public PLTLExp visit(Release exp) {
-            return new And(exp.getRight().accept(new LocalAfter()), new Or(exp.getLeft().accept(new LocalAfter()), postUpdate(exp)));
+        public PLTLExp visit(True exp, HashSet<String> args) {
+            return exp;
+        }
+
+        @Override
+        public PLTLExp visit(False exp, HashSet<String> args) {
+            return exp;
         }
 
 
         @Override
-        public PLTLExp visit(Since exp) {
-            return exp.getRight().accept(new LocalAfter());
-        }
-
-        @Override
-        public PLTLExp visit(WSince exp) {
-            return new Or(exp.getLeft(), exp.getRight()).accept(new LocalAfter());
-        }
-
-
-        @Override
-        public PLTLExp visit(Before exp) {
-            return new And(exp.getLeft(), exp.getRight()).accept(new LocalAfter());
-        }
-
-        @Override
-        public PLTLExp visit(WBefore exp) {
-            return exp.getRight().accept(new LocalAfter());
-        }
-
-
-        @Override
-        public PLTLExp visit(Not exp) {
+        public PLTLExp visit(Globally exp, HashSet<String> args) {
             return null;
         }
 
-        PLTLExp postUpdate(PLTLExp target){
+        @Override
+        public PLTLExp visit(Historically exp, HashSet<String> args) {
+            return null;
+        } //Should not be reached
+
+
+        @Override
+        public PLTLExp visit(Until exp, HashSet<String> args) {
+            PLTLExp right = exp.getRight().accept(new LocalAfter(), args);
+            return new Or(right, new And(exp.getLeft().accept(new LocalAfter(), args), postUpdate(exp, args)));
+        }
+        @Override
+        public PLTLExp visit(WUntil exp, HashSet<String> args) {
+            return new Or(exp.getRight().accept(new LocalAfter(), args),
+                    new And(exp.getLeft().accept(new LocalAfter(), args), postUpdate(exp, args)));
+        }
+
+        @Override
+        public PLTLExp visit(M exp, HashSet<String> args) {
+            return new And(exp.getRight().accept(new LocalAfter(), args),
+                    new Or(exp.getLeft().accept(new LocalAfter(), args), postUpdate(exp, args)));
+        }
+
+
+        @Override
+        public PLTLExp visit(Future exp, HashSet<String> args) {
+            return null;
+        }
+
+        @Override
+        public PLTLExp visit(Once exp, HashSet<String> args) {
+            return null;
+        }
+
+
+        @Override
+        public PLTLExp visit(Next exp, HashSet<String> args) {
+            return postUpdate(exp.getTarget(), args);
+        }
+
+        @Override
+        public PLTLExp visit(Yesterday exp, HashSet<String> args) {
+            return new False();
+        }
+
+        @Override
+        public PLTLExp visit(WYesterday exp, HashSet<String> args) {
+            return new True();
+        }
+
+
+        @Override
+        public PLTLExp visit(Release exp, HashSet<String> args) {
+            return new And(exp.getRight().accept(new LocalAfter(), args),
+                    new Or(exp.getLeft().accept(new LocalAfter(), args), postUpdate(exp, args)));
+        }
+
+
+        @Override
+        public PLTLExp visit(Since exp, HashSet<String> args) {
+            return exp.getRight().accept(new LocalAfter(), args);
+        }
+
+        @Override
+        public PLTLExp visit(WSince exp, HashSet<String> args) {
+            return new Or(exp.getLeft(), exp.getRight()).accept(new LocalAfter(), args);
+        }
+
+
+        @Override
+        public PLTLExp visit(Before exp, HashSet<String> args) {
+            return new And(exp.getLeft(), exp.getRight()).accept(new LocalAfter(), args);
+        }
+
+        @Override
+        public PLTLExp visit(WBefore exp, HashSet<String> args) {
+            return exp.getRight().accept(new LocalAfter(), args);
+        }
+
+
+        @Override
+        public PLTLExp visit(Not exp, HashSet<String> args) {
+            return null;
+        }
+
+        PLTLExp postUpdate(PLTLExp target, HashSet<String> args){
             PLTLExp result = target.accept(new Weakening());
 
             for (PLTLExp C: WC) {
-                result = new And(C.accept(new LocalAfter()), result);
+                result = new And(C.accept(new LocalAfter(), args), result);
             }
 
             return result;

@@ -13,6 +13,7 @@ public abstract class PLTLExp {
         transitionLabel = -1;
     }
 
+
     public abstract <R> R accept(Visitor<R> v);
     public interface Visitor <R> {
         R visit(And exp);
@@ -47,6 +48,42 @@ public abstract class PLTLExp {
         R visit(WBefore exp);
 
         R visit(Not exp);
+    }
+
+    public abstract <R, A> R accept(AltVisitor<R,A> v, A args);
+    public interface AltVisitor <R,A>{
+        R visit(And exp, A args);
+        R visit(Or exp, A args);
+
+        R visit(Term exp, A args);
+        R visit(NotTerm exp, A args);
+
+        R visit(True exp, A args);
+        R visit(False exp, A args);
+
+        R visit(Globally exp, A args);
+        R visit(Historically exp, A args);
+
+        R visit(Until exp, A args);
+        R visit(WUntil exp, A args);
+        R visit(M exp, A args);
+
+        R visit(Future exp, A args);
+        R visit(Once exp, A args);
+
+        R visit(Next exp, A args);
+        R visit(Yesterday exp, A args);
+        R visit(WYesterday exp, A args);
+
+        R visit(Release exp, A args);
+
+        R visit(Since exp, A args);
+        R visit(WSince exp, A args);
+
+        R visit(Before exp, A args);
+        R visit(WBefore exp, A args);
+
+        R visit(Not exp, A args);
     }
 
 }

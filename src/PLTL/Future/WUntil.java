@@ -15,6 +15,11 @@ public class WUntil extends Binary {
     }
 
     @Override
+    public <R, A> R accept(AltVisitor<R, A> v, A args) {
+        return v.visit(this, args);
+    }
+
+    @Override
     public boolean equals(Object obj){
         if(obj == null){
             return false;

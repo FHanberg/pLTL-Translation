@@ -1,17 +1,27 @@
 import PLTL.PLTLExp;
 
+import java.util.HashSet;
+
 public class NBAState {
     PLTLExp m_exp;
     int m_label;
+    HashSet<String> m_valuation;
+
 
     public NBAState(PLTLExp exp){
         m_exp = exp;
         m_label = -1;
     }
+    public NBAState(PLTLExp exp, HashSet<String> valuation){
+        m_exp = exp;
+        m_label = -1;
+        m_valuation = valuation;
+    }
 
     public NBAState(PLTLExp exp, int label){
         m_exp = exp;
         m_label = label;
+        m_valuation = new HashSet<>();
     }
 
     public int getLabel() {

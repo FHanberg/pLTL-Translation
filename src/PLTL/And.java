@@ -14,6 +14,11 @@ public class And extends Binary{
     }
 
     @Override
+    public <R, A> R accept(AltVisitor<R, A> v, A args) {
+        return v.visit(this, args);
+    }
+
+    @Override
     public boolean equals(Object obj){
         if(obj == null){
             return false;
@@ -42,7 +47,7 @@ public class And extends Binary{
         return true;
     }
 
-    HashSet<PLTLExp> getAllAndProps(And exp){
+    public HashSet<PLTLExp> getAllAndProps(And exp){
         HashSet<PLTLExp> results = new HashSet<>();
         if(exp.getLeft() instanceof And){
             results.addAll(getAllAndProps((And) exp.getLeft()));
