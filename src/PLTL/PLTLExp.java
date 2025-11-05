@@ -30,7 +30,7 @@ public abstract class PLTLExp {
 
         R visit(Until exp);
         R visit(WUntil exp);
-        R visit(M exp);
+        R visit(Mighty exp);
 
         R visit(Future exp);
         R visit(Once exp);
@@ -66,7 +66,7 @@ public abstract class PLTLExp {
 
         R visit(Until exp, A args);
         R visit(WUntil exp, A args);
-        R visit(M exp, A args);
+        R visit(Mighty exp, A args);
 
         R visit(Future exp, A args);
         R visit(Once exp, A args);

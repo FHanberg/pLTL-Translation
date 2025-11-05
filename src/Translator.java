@@ -2,7 +2,7 @@ import PLTL.*;
 import PLTL.Future.*;
 import PLTL.Past.*;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 
@@ -14,6 +14,8 @@ public class Translator {
     HashSet<PLTLExp> WC;
     //Current formulas to be weakened
     HashSet<Integer> toWeaken;
+    boolean opt;
+    boolean toOpt;
 
     public Translator(){
         pastLabels = 0;
@@ -24,7 +26,8 @@ public class Translator {
         return transitionLabels;
     }
 
-    public HashSet<NBAState> translationStep(NBAState base, LinkedList<String> atomList){
+    public HashSet<NBAState> translationStep(NBAState base, LinkedList<String> atomList, boolean optimize){
+        opt = optimize;
         pastLabels = 0;
         HashSet<NBAState> result = new HashSet<>();
         setupLabels(base.getExp());
@@ -34,11 +37,20 @@ public class Translator {
             toWeaken = C;
             setWC(base.getExp(), C);
             for (HashSet<String> valuation : valuations) {
+                toOpt = false;
                 PLTLExp current = base.getExp().accept(new LocalAfter(), valuation);
-                PLTLExp rewritten = current.accept(new DNF());
+                if(toOpt && optimize) {
+                    for (PLTLExp wc : WC) {
+                        current = new And(wc.accept(new LocalAfter(), valuation), current);
+                    }
+                }
+                PLTLExp partTrim = trueFalseTrim(current);
+                PLTLExp fullTrim = andTrim(partTrim);
+                PLTLExp rewritten = fullTrim.accept(new DNF());
                 HashSet<PLTLExp> implicants = primeImplicants(rewritten);
                 for (PLTLExp exp : implicants) {
-                    result.add(new NBAState(trueFalseTrim(exp), valuation));
+                    PLTLExp trimOne = trueFalseTrim(exp);
+                    result.add(new NBAState(andTrim(trimOne), valuation));
                 }
             }
         }
@@ -48,6 +60,14 @@ public class Translator {
 
     //Checks And statements for True/False and trims accordingly
     private PLTLExp trueFalseTrim(PLTLExp exp){
+        if(exp instanceof Since){
+            if(((Since)exp).getRight() instanceof False)
+                return new False();
+        }
+        if(exp instanceof WSince){
+            if(((WSince)exp).getLeft() instanceof True)
+                return new True();
+        }
         if(exp instanceof And){
             PLTLExp left = trueFalseTrim(((And) exp).getLeft());
             PLTLExp right = trueFalseTrim(((And) exp).getRight());
@@ -81,9 +101,47 @@ public class Translator {
                 return left;
             }
             return new Or(left, right);
+        }if(exp instanceof Until){
+            if(((Until) exp).getRight() instanceof Until right){
+                if(((Until) exp).getLeft().equals(right.getLeft())){
+                    return right;
+                }
+            }
         }
 
+
         return exp;
+    }
+
+    //Removes duplicate statements from conjunctions
+    private PLTLExp andTrim(PLTLExp exp){
+        if(!exp.getClass().equals(And.class)){
+            return exp;
+        }
+        ArrayList<PLTLExp> trim = new ArrayList<>();
+        ArrayList<PLTLExp> list = And.getAllAndProps((And) exp);
+        for (int x = 0; x < list.size() ; x++) {
+            PLTLExp cur = list.get(x);
+            boolean match = false;
+            for(int i = x+1; i < list.size(); i++){
+                if (cur.equals(list.get(i))) {
+                    match = true;
+                    break;
+                }
+            }
+            if(!match){
+                trim.add(cur);
+            }
+        }
+        if(trim.size() == 1)
+            return trim.get(0);
+        PLTLExp result = new And(trim.get(trim.size()-1), trim.get(trim.size()-2));
+        if(trim.size() >= 3) {
+            for (int x = trim.size() - 3; x >= 0; x--) {
+                result = new And(trim.get(x), result);
+            }
+        }
+        return result;
     }
 
     //Returns the (currently unoptimized) implicants of a formula
@@ -117,7 +175,7 @@ public class Translator {
             if (exp instanceof Since || exp instanceof WSince || exp instanceof Before || exp instanceof WBefore) {
                 exp.label = pastLabels;
                 pastLabels +=1;
-            } else if(exp instanceof Until || exp instanceof M){
+            } else if(exp instanceof Until || exp instanceof Mighty){
                 if(exp.transitionLabel == -1){
                     exp.transitionLabel = transitionLabels;
                     transitionLabels += 1;
@@ -251,7 +309,7 @@ public class Translator {
         }
 
         @Override
-        public PLTLExp visit(M exp, HashSet<String> args) {
+        public PLTLExp visit(Mighty exp, HashSet<String> args) {
             return new And(exp.getRight().accept(new LocalAfter(), args),
                     new Or(exp.getLeft().accept(new LocalAfter(), args), postUpdate(exp, args)));
         }
@@ -321,8 +379,12 @@ public class Translator {
         PLTLExp postUpdate(PLTLExp target, HashSet<String> args){
             PLTLExp result = target.accept(new Weakening());
 
-            for (PLTLExp C: WC) {
-                result = new And(C.accept(new LocalAfter(), args), result);
+            if(!opt) {
+                for (PLTLExp C : WC) {
+                    result = new And(C.accept(new LocalAfter(), args), result);
+                }
+            }else{
+                toOpt = true;
             }
 
             return result;
@@ -388,8 +450,8 @@ public class Translator {
         }
 
         @Override
-        public PLTLExp visit(M exp) {
-            M newExp = new M(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
+        public PLTLExp visit(Mighty exp) {
+            Mighty newExp = new Mighty(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
             newExp.transitionLabel = exp.transitionLabel;
             return newExp;
         }
@@ -545,7 +607,7 @@ public class Translator {
         }
 
         @Override
-        public PLTLExp visit(M exp) {
+        public PLTLExp visit(Mighty exp) {
             return exp;
         }
 

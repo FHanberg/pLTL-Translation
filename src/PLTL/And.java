@@ -1,5 +1,6 @@
 package PLTL;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 
 public class And extends Binary{
@@ -26,8 +27,8 @@ public class And extends Binary{
         if(!(obj instanceof And)){
             return false;
         }
-        HashSet<PLTLExp> first = getAllAndProps(this);
-        HashSet<PLTLExp> second = getAllAndProps((And) obj);
+        ArrayList<PLTLExp> first = getAllAndProps(this);
+        ArrayList<PLTLExp> second = getAllAndProps((And) obj);
         if(first.size() != second.size()){
             return false;
         }
@@ -47,8 +48,8 @@ public class And extends Binary{
         return true;
     }
 
-    public HashSet<PLTLExp> getAllAndProps(And exp){
-        HashSet<PLTLExp> results = new HashSet<>();
+    public static ArrayList<PLTLExp> getAllAndProps(And exp){
+        ArrayList<PLTLExp> results = new ArrayList<>();
         if(exp.getLeft() instanceof And){
             results.addAll(getAllAndProps((And) exp.getLeft()));
         }else{

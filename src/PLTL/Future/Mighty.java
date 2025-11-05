@@ -4,8 +4,8 @@ import PLTL.Binary;
 import PLTL.PLTLExp;
 
 //Not actually sure what this operator is shorthand for, honestly
-public class M extends Binary {
-    public M(PLTLExp left, PLTLExp right) {
+public class Mighty extends Binary {
+    public Mighty(PLTLExp left, PLTLExp right) {
         super(left, right);
     }
 
@@ -24,12 +24,12 @@ public class M extends Binary {
         if(obj == null){
             return false;
         }
-        if(!(obj instanceof M)){
+        if(!(obj instanceof Mighty)){
             return false;
         }
-        if(!((M) obj).getLeft().equals(this.getLeft())){
+        if(!((Mighty) obj).getLeft().equals(this.getLeft())){
             return false;
         }
-        return ((M) obj).getRight().equals(this.getRight());
+        return ((Mighty) obj).getRight().equals(this.getRight());
     }
 }

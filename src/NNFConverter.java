@@ -69,10 +69,10 @@ public class NNFConverter implements PLTLExp.Visitor<PLTLExp> {
     }
 
     @Override
-    public PLTLExp visit(M exp) {
+    public PLTLExp visit(Mighty exp) {
         PLTLExp newLeft = exp.getLeft().accept(new NNFConverter());
         PLTLExp newRight = exp.getRight().accept(new NNFConverter());
-        return new M(newLeft, newRight);
+        return new Mighty(newLeft, newRight);
     }
 
 
@@ -174,9 +174,9 @@ public class NNFConverter implements PLTLExp.Visitor<PLTLExp> {
                 return new Until(new Not(left), new Not(right)).accept(new NNFConverter());
             }
             if(target instanceof WUntil){
-                return new M(new Not(left), new Not(right)).accept(new NNFConverter());
+                return new Mighty(new Not(left), new Not(right)).accept(new NNFConverter());
             }
-            if(target instanceof M){
+            if(target instanceof Mighty){
                 return new WUntil(new Not(left), new Not(right)).accept(new NNFConverter());
             }
             if(target instanceof Since){
