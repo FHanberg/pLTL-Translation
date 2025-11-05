@@ -16,11 +16,11 @@ public class ArbiterGen {
             for (int j = i + 1; j < n; j++){
                 if (j != 1)
                     builder.append("& ");
-                builder.append("!( g");//"!( gi & gj ) "
+                builder.append("(!( g");//"!( gi & gj ) "
                 builder.append(getChar(i));
                 builder.append(" & g");
                 builder.append(getChar(j));
-                builder.append(" ) ");
+                builder.append(" )) ");
             }
         }
         builder.append("))");
@@ -54,11 +54,11 @@ public class ArbiterGen {
             for (int j = i + 1; j < n; j++){
                 if(j != 1)
                     builder.append("& ");
-                builder.append("! ( g");//"!( gi & gj ) "
+                builder.append("(! ( g");//"!( gi & gj ) "
                 builder.append(getChar(i));
                 builder.append(" & g");
                 builder.append(getChar(j));
-                builder.append(" ) ");
+                builder.append(" )) ");
             }
         }
         builder.append("))");

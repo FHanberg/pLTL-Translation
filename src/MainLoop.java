@@ -50,12 +50,11 @@ public class MainLoop {
             int z = 1;
             for (NBAState node: currentSet) {
                 System.out.println("Progress: " + z);
-                System.out.println("StateCount: " + mainSet.size());
                 z++;
                 int curLabel = node.m_label;
                 //Perform a step in the main NBA-to-Büchi translation
                 LinkedList<TranslationOutput> prospective = t.translationStep(node, atoms, optimize);
-
+                System.out.println("Prospective Size: " + prospective.size());
                 //For each primary implicant:
                 for (TranslationOutput out: prospective) {
                     NBAState next = new NBAState(out.getTo());
