@@ -14,7 +14,7 @@ public class ArbiterGen {
         builder.append("(G(");
         for (int i = 0; i < n-1; i++) {
             for (int j = i + 1; j < n; j++){
-                if(i != 0 && j != 1)
+                if (j != 1)
                     builder.append("& ");
                 builder.append("!( g");//"!( gi & gj ) "
                 builder.append(getChar(i));
@@ -48,25 +48,20 @@ public class ArbiterGen {
 
     public static String PastArbiter(int n){
         StringBuilder builder = new StringBuilder();
-        boolean l = n > 2;
 
-        builder.append("(");
+        builder.append("(G(");
         for (int i = 0; i < n-1; i++) {
             for (int j = i + 1; j < n; j++){
                 if(j != 1)
                     builder.append("& ");
-                if(l)
-                    builder.append("(");
                 builder.append("! ( g");//"!( gi & gj ) "
                 builder.append(getChar(i));
                 builder.append(" & g");
                 builder.append(getChar(j));
                 builder.append(" ) ");
-                if(l)
-                    builder.append(")");
             }
         }
-        builder.append(")");
+        builder.append("))");
 
         for(int i = 0 ; i < n ; i++){
             builder.append("& (GF ( !r"); // & (GF(!ra ~S ga)) & (G((ga -> ra) | (Y(ra B !ga)))

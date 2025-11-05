@@ -26,10 +26,10 @@ public class Translator {
         return transitionLabels;
     }
 
-    public HashSet<NBAState> translationStep(NBAState base, LinkedList<String> atomList, boolean optimize){
+    public LinkedList<TranslationOutput> translationStep(NBAState base, LinkedList<String> atomList, boolean optimize){
         opt = optimize;
         pastLabels = 0;
-        HashSet<NBAState> result = new HashSet<>();
+        LinkedList<TranslationOutput> result = new LinkedList<>();
         setupLabels(base.getExp());
         HashSet<HashSet<String>> valuations = getAllValuations(atomList, 0, new HashSet<>());
         for(HashSet<Integer> C : getAllSubsets(pastLabels, 0, new HashSet<>())) {
@@ -50,12 +50,22 @@ public class Translator {
                 HashSet<PLTLExp> implicants = primeImplicants(rewritten);
                 for (PLTLExp exp : implicants) {
                     PLTLExp trimOne = trueFalseTrim(exp);
-                    result.add(new NBAState(andTrim(trimOne), valuation));
+                    addResult(result, base, andTrim(trimOne), valuation);
                 }
             }
         }
-
         return result;
+    }
+
+    private void addResult(LinkedList<TranslationOutput> list, NBAState state, PLTLExp exp, HashSet val){
+        for (TranslationOutput item: list) {
+            if(item.getTo().equals(exp)){
+                item.addVal(val);
+                return;
+            }
+
+        }
+        list.add(new TranslationOutput(state, exp,val));
     }
 
     //Checks And statements for True/False and trims accordingly

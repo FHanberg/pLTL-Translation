@@ -19,12 +19,11 @@ public class NBATransition {
         m_valuations.add(valuation);
     }
 
-    public NBATransition(int from, int to, HashSet<Integer> labels, HashSet<String> valuation){
+    public NBATransition(int from, int to, HashSet<Integer> labels, HashSet<HashSet<String>> valuations){
         m_from = from;
         m_to = to;
         m_labels = labels;
-        m_valuations = new HashSet<>();
-        m_valuations.add(valuation);
+        m_valuations = valuations;
     }
 
     public void addValuation(HashSet<String> valuation){

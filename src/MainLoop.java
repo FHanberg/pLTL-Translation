@@ -50,16 +50,17 @@ public class MainLoop {
             int z = 1;
             for (NBAState node: currentSet) {
                 System.out.println("Progress: " + z);
+                System.out.println("StateCount: " + mainSet.size());
                 z++;
                 int curLabel = node.m_label;
                 //Perform a step in the main NBA-to-Büchi translation
-                HashSet<NBAState> prospective = t.translationStep(node, atoms, optimize);
+                LinkedList<TranslationOutput> prospective = t.translationStep(node, atoms, optimize);
 
                 //For each primary implicant:
-                for (NBAState next: prospective) {
-
+                for (TranslationOutput out: prospective) {
+                    NBAState next = new NBAState(out.getTo());
                     //Determine if the main set already has an equal state, and return its label
-                    int equalLabel = getLabelOfEqual(next, mainSet);
+                    int equalLabel = getLabelOfEqual(out.getTo(), mainSet);
                     //If the state is wholly new, label and add it to both the main set and
                     // the list of upcoming states to check
                     if(equalLabel == -1){
@@ -77,22 +78,25 @@ public class MainLoop {
                                 }
                             }
                         }
-                        transitionSet.add(new NBATransition(curLabel, stateLabel, transLabels, next.m_valuation));
+                        transitionSet.add(new NBATransition(curLabel, stateLabel, transLabels, out.getVals()));
                         stateLabel += 1;
 
                         //If the state has been created before, add a new transition if necessary
-                    }else if(!transitionRepeat(new NBATransition(curLabel, equalLabel, new HashSet<>()), transitionSet, next.m_valuation)){
-                        //Labels are added if their corresponding U/M are NOT present
-                        HashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
-                        HashSet<Integer> transLabels = new HashSet<>();
-                        if(!(next.m_exp instanceof False)) {
-                            for (int i = 0; i < t.getTransitionLabels(); i++) {
-                                if (!antiLabels.contains(i)) {
-                                    transLabels.add(i);
+                    }else{
+                            if(!transitionRepeat(new NBATransition(curLabel, equalLabel, new HashSet<>()), transitionSet, out.getVals())){
+                                //Labels are added if their corresponding U/M are NOT present
+                                HashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
+                                HashSet<Integer> transLabels = new HashSet<>();
+                                if(!(next.m_exp instanceof False)) {
+                                    for (int i = 0; i < t.getTransitionLabels(); i++) {
+                                        if (!antiLabels.contains(i)) {
+                                            transLabels.add(i);
+                                        }
+                                    }
                                 }
+                                transitionSet.add(new NBATransition(curLabel, equalLabel, transLabels, out.getVals()));
+
                             }
-                        }
-                        transitionSet.add(new NBATransition(curLabel, equalLabel, transLabels, next.m_valuation));
 
                     }
                 }
@@ -259,10 +263,12 @@ public class MainLoop {
     /*
     Check if a transition already exists in a given set.
      */
-    static public boolean transitionRepeat(NBATransition target, LinkedList<NBATransition> set, HashSet<String> valuation){
+    static public boolean transitionRepeat(NBATransition target, LinkedList<NBATransition> set, HashSet<HashSet<String>> valuations){
         for(NBATransition t : set){
             if(t.equals(target)) {
-                t.addValuation(valuation);
+                for (HashSet<String> s: valuations) {
+                    t.addValuation(s);
+                }
                 return true;
             }
         }
@@ -306,9 +312,9 @@ public class MainLoop {
     Checks if a state already exists in a set, and returns its label if so.
     otherwise returns -1.
      */
-    static public int getLabelOfEqual(NBAState target, LinkedList<NBAState> set){
+    static public int getLabelOfEqual(PLTLExp target, LinkedList<NBAState> set){
         for(NBAState node : set){
-            if(target.equals(node))
+            if(target.equals(node.m_exp))
                 return node.getLabel();
         }
         return -1;
