@@ -19,8 +19,9 @@ public class main {
 
     public static void main(String[] args){
 
-        try {
-            DepthGen d = new DepthGen();
+        Testing.ArbiterTesting(2,4);
+        //try {
+            /*DepthGen d = new DepthGen();
             //InputStream input = new FileInputStream("test.txt");
             //InputStream input = new ByteArrayInputStream(ArbiterGen.PastArbiter(2).getBytes(StandardCharsets.UTF_8));
             InputStream input = new ByteArrayInputStream(d.Generate(3,3, 10, 50).getBytes(StandardCharsets.UTF_8));
@@ -34,13 +35,13 @@ public class main {
             FormulaContext formulaContext = parser.formula();
 
             String result = MainLoop.Process(Objects.requireNonNull(ContextConverter.Conversion(formulaContext)), true);
-            System.out.print(result);
+            System.out.print(result);*/
         }
-        catch(IOException e){
+        /*catch(IOException e){
             e.printStackTrace();
-        }
+        }*/
     }
 
 
 
-}
+//}

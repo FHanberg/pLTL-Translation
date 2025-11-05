@@ -12,15 +12,15 @@ public class MainLoop {
         //Initialization
         int stateLabel = 0;
 
-        System.out.println("Provided formula:");
+        //System.out.println("Provided formula:");
         //Initial conversion to NNF + console readout
-        input.accept(new FormulaReader());
-        System.out.println();
+        //input.accept(new FormulaReader());
+        //System.out.println();
         PLTLExp newTest = input.accept(new NNFConverter());
-        System.out.println("Post-NNF formula:");
-        newTest.accept(new FormulaReader());
-        System.out.println();
-        System.out.println();
+        //System.out.println("Post-NNF formula:");
+        //newTest.accept(new FormulaReader());
+        //System.out.println();
+        //System.out.println();
 
         LinkedList<String> atoms = atomRepeat(atomList(newTest));
 
@@ -42,13 +42,19 @@ public class MainLoop {
         Translator t = new Translator();
         //Main loop of full translation
         while(!currentSet.isEmpty()){
+            System.out.print("Set size: " + mainSet.size() + " Transition size: " + transitionSet.size() + "\n" );
             //Storage set used to contain the states which should be checked in the next step.
             HashSet<NBAState> nextSet = new HashSet<>();
             //For each "fresh" state
+            System.out.println("Current Set size: " + currentSet.size());
+            int z = 1;
             for (NBAState node: currentSet) {
+                System.out.println("Progress: " + z);
+                z++;
                 int curLabel = node.m_label;
                 //Perform a step in the main NBA-to-Büchi translation
                 HashSet<NBAState> prospective = t.translationStep(node, atoms, optimize);
+
                 //For each primary implicant:
                 for (NBAState next: prospective) {
 

@@ -27,6 +27,8 @@ public class Output {
         result.append("\n");
         result.append("--BODY--\n");
         for(NBAState state : states){
+            state.m_exp.accept(new FormulaReader());
+            System.out.println("");
             result.append("State: ").append(state.getLabel()).append(" \n");
             result.append(transitionReadout(state.m_label, trans, atoms));
         }
