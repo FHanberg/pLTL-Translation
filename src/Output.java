@@ -1,5 +1,6 @@
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 
 /*
@@ -111,7 +112,7 @@ public class Output {
         return result;
     }
 
-    static private HashSet<HashSet<String>> transitionTrim(HashSet<HashSet<String>> target, LinkedList<String> atoms){
+    static private HashSet<HashSet<String>> transitionTrim(LinkedHashSet<LinkedHashSet<String>> target, LinkedList<String> atoms){
         HashSet<HashSet<String>> result = new HashSet<>();
         //Convert to HOA-format for valuations (0,1,2...)
         HashSet<HashSet<String>> converted = valuationConversion(target, atoms);
@@ -136,7 +137,7 @@ public class Output {
         return result;
     }
 
-    private static HashSet<HashSet<String>> valuationConversion(HashSet<HashSet<String>> target, LinkedList<String> atoms){
+    private static HashSet<HashSet<String>> valuationConversion(LinkedHashSet<LinkedHashSet<String>> target, LinkedList<String> atoms){
         HashSet<HashSet<String>> result = new HashSet<>();
         for (HashSet<String> set: target) {
             HashSet<String> replacement = new HashSet<>();

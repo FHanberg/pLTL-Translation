@@ -19,27 +19,10 @@ public class main {
 
     public static void main(String[] args){
 
-        Testing.ArbiterTesting(2,4);
-        //try {
-            /*DepthGen d = new DepthGen();
-            //InputStream input = new FileInputStream("test.txt");
-            //InputStream input = new ByteArrayInputStream(ArbiterGen.PastArbiter(2).getBytes(StandardCharsets.UTF_8));
-            InputStream input = new ByteArrayInputStream(d.Generate(3,3, 10, 50).getBytes(StandardCharsets.UTF_8));
-            assert input != null;
-            BufferedInputStream in = new BufferedInputStream(input);
-            Parser.pltlGrammarLexer lexer = new pltlGrammarLexer(CharStreams.fromStream(in));
-            TokenStream tokenStream = new CommonTokenStream(lexer);
-            Parser.pltlGrammarParser parser = new pltlGrammarParser(tokenStream);
+        Testing.ArbiterTesting(2,2);
 
-            @SuppressWarnings("unused")
-            FormulaContext formulaContext = parser.formula();
-
-            String result = MainLoop.Process(Objects.requireNonNull(ContextConverter.Conversion(formulaContext)), true);
-            System.out.print(result);*/
         }
-        /*catch(IOException e){
-            e.printStackTrace();
-        }*/
+
     }
 
 

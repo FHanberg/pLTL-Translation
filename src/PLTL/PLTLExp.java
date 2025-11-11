@@ -5,11 +5,13 @@ import PLTL.Past.*;
 
 //Main abstract class for formulas
 public abstract class PLTLExp {
-    public int transitionLabel;
-    public int label;
+    public int transitionLabel; //marks Until and Mighty
+    public int pastLabel; //marks past subformulae
+
+    public int genLabel; //used for keymapping
 
     public PLTLExp(){
-        label = -1;
+        pastLabel = -1;
         transitionLabel = -1;
     }
 

@@ -2,33 +2,33 @@ import PLTL.PLTLExp;
 import PLTL.True;
 
 import java.util.Comparator;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 
 public class NBATransition {
     int m_from;
     int m_to;
-    HashSet<Integer> m_labels;
-    HashSet<HashSet<String>> m_valuations;
+    LinkedHashSet<Integer> m_labels;
+    LinkedHashSet<LinkedHashSet<String>> m_valuations;
 
-    public NBATransition(int from, int to, HashSet<String> valuation){
+    public NBATransition(int from, int to, LinkedHashSet<String> valuation){
         m_from = from;
         m_to = to;
-        m_labels = new HashSet<>();
-        m_valuations = new HashSet<>();
+        m_labels = new LinkedHashSet<>();
+        m_valuations = new LinkedHashSet<>();
         m_valuations.add(valuation);
     }
 
-    public NBATransition(int from, int to, HashSet<Integer> labels, HashSet<HashSet<String>> valuations){
+    public NBATransition(int from, int to, LinkedHashSet<Integer> labels, LinkedHashSet<LinkedHashSet<String>> valuations){
         m_from = from;
         m_to = to;
         m_labels = labels;
         m_valuations = valuations;
     }
 
-    public void addValuation(HashSet<String> valuation){
+    public void addValuation(LinkedHashSet<String> valuation){
         boolean old = false;
-        for (HashSet<String> v: m_valuations) {
+        for (LinkedHashSet<String> v: m_valuations) {
             if (v.equals(valuation)) {
                 old = true;
                 break;

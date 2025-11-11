@@ -2,7 +2,8 @@ import PLTL.*;
 import PLTL.Future.*;
 import PLTL.Past.*;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 
 public class MainLoop {
@@ -12,15 +13,8 @@ public class MainLoop {
         //Initialization
         int stateLabel = 0;
 
-        //System.out.println("Provided formula:");
-        //Initial conversion to NNF + console readout
-        //input.accept(new FormulaReader());
-        //System.out.println();
+
         PLTLExp newTest = input.accept(new NNFConverter());
-        //System.out.println("Post-NNF formula:");
-        //newTest.accept(new FormulaReader());
-        //System.out.println();
-        //System.out.println();
 
         LinkedList<String> atoms = atomRepeat(atomList(newTest));
 
@@ -29,7 +23,7 @@ public class MainLoop {
         //Primary transition output
         LinkedList<NBATransition> transitionSet = new LinkedList<>();
         //marks current states to be translated
-        HashSet<NBAState> currentSet = new HashSet<>();
+        LinkedHashSet<NBAState> currentSet = new LinkedHashSet<>();
 
         //Create initial state
         NBAState firstState = new NBAState(newTest, stateLabel);
@@ -44,7 +38,7 @@ public class MainLoop {
         while(!currentSet.isEmpty()){
             System.out.print("Set size: " + mainSet.size() + " Transition size: " + transitionSet.size() + "\n" );
             //Storage set used to contain the states which should be checked in the next step.
-            HashSet<NBAState> nextSet = new HashSet<>();
+            LinkedHashSet<NBAState> nextSet = new LinkedHashSet<>();
             //For each "fresh" state
             System.out.println("Current Set size: " + currentSet.size());
             int z = 1;
@@ -68,8 +62,8 @@ public class MainLoop {
                         mainSet.add(next);
 
                         //Labels are added if their corresponding U/M are NOT present
-                        HashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
-                        HashSet<Integer> transLabels = new HashSet<>();
+                        LinkedHashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
+                        LinkedHashSet<Integer> transLabels = new LinkedHashSet<>();
                         if(!(next.m_exp instanceof False)) {
                             for (int i = 0; i < t.getTransitionLabels(); i++) {
                                 if (!antiLabels.contains(i)) {
@@ -82,10 +76,10 @@ public class MainLoop {
 
                         //If the state has been created before, add a new transition if necessary
                     }else{
-                            if(!transitionRepeat(new NBATransition(curLabel, equalLabel, new HashSet<>()), transitionSet, out.getVals())){
+                            if(!transitionRepeat(new NBATransition(curLabel, equalLabel, new LinkedHashSet<>()), transitionSet, out.getVals())){
                                 //Labels are added if their corresponding U/M are NOT present
-                                HashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
-                                HashSet<Integer> transLabels = new HashSet<>();
+                                LinkedHashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
+                                LinkedHashSet<Integer> transLabels = new LinkedHashSet<>();
                                 if(!(next.m_exp instanceof False)) {
                                     for (int i = 0; i < t.getTransitionLabels(); i++) {
                                         if (!antiLabels.contains(i)) {
@@ -113,148 +107,148 @@ public class MainLoop {
     /*
     Return all labels to not be applied to a transition.
      */
-    public static class transitionLabel implements PLTLExp.Visitor<HashSet<Integer>>{
+    public static class transitionLabel implements PLTLExp.Visitor<LinkedHashSet<Integer>>{
 
 
         @Override
-        public HashSet<Integer> visit(And exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(And exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(Or exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(Or exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(Term exp) {
-            return new HashSet<>();
+        public LinkedHashSet<Integer> visit(Term exp) {
+            return new LinkedHashSet<>();
         }
 
         @Override
-        public HashSet<Integer> visit(NotTerm exp) {
-            return new HashSet<>();
+        public LinkedHashSet<Integer> visit(NotTerm exp) {
+            return new LinkedHashSet<>();
         }
 
         @Override
-        public HashSet<Integer> visit(True exp) {
-            return new HashSet<>();
+        public LinkedHashSet<Integer> visit(True exp) {
+            return new LinkedHashSet<>();
         }
 
         @Override
-        public HashSet<Integer> visit(False exp) {
-            return new HashSet<>();
+        public LinkedHashSet<Integer> visit(False exp) {
+            return new LinkedHashSet<>();
         }
 
         @Override
-        public HashSet<Integer> visit(Globally exp) {
+        public LinkedHashSet<Integer> visit(Globally exp) {
             return exp.getTarget().accept(new transitionLabel());
         }
 
         @Override
-        public HashSet<Integer> visit(Historically exp) {
+        public LinkedHashSet<Integer> visit(Historically exp) {
             return exp.getTarget().accept(new transitionLabel());
         }
 
         @Override
-        public HashSet<Integer> visit(Until exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(Until exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             left.add(exp.transitionLabel);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(WUntil exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(WUntil exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(Mighty exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(Mighty exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             left.add(exp.transitionLabel);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(Future exp) {
+        public LinkedHashSet<Integer> visit(Future exp) {
             return exp.getTarget().accept(new transitionLabel());
         }
 
         @Override
-        public HashSet<Integer> visit(Once exp) {
+        public LinkedHashSet<Integer> visit(Once exp) {
             return exp.getTarget().accept(new transitionLabel());
         }
 
         @Override
-        public HashSet<Integer> visit(Next exp) {
+        public LinkedHashSet<Integer> visit(Next exp) {
             return exp.getTarget().accept(new transitionLabel());
         }
 
         @Override
-        public HashSet<Integer> visit(Yesterday exp) {
+        public LinkedHashSet<Integer> visit(Yesterday exp) {
             return exp.getTarget().accept(new transitionLabel());
         }
 
         @Override
-        public HashSet<Integer> visit(WYesterday exp) {
+        public LinkedHashSet<Integer> visit(WYesterday exp) {
             return exp.getTarget().accept(new transitionLabel());
         }
 
         @Override
-        public HashSet<Integer> visit(Release exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(Release exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(Since exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(Since exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(WSince exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(WSince exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(Before exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(Before exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(WBefore exp) {
-            HashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
-            HashSet<Integer> right = exp.getRight().accept(new transitionLabel());
+        public LinkedHashSet<Integer> visit(WBefore exp) {
+            LinkedHashSet<Integer> left = exp.getLeft().accept(new transitionLabel());
+            LinkedHashSet<Integer> right = exp.getRight().accept(new transitionLabel());
             left.addAll(right);
             return left;
         }
 
         @Override
-        public HashSet<Integer> visit(Not exp) {
+        public LinkedHashSet<Integer> visit(Not exp) {
             return null;
         }
     }
@@ -262,10 +256,10 @@ public class MainLoop {
     /*
     Check if a transition already exists in a given set.
      */
-    static public boolean transitionRepeat(NBATransition target, LinkedList<NBATransition> set, HashSet<HashSet<String>> valuations){
+    static public boolean transitionRepeat(NBATransition target, LinkedList<NBATransition> set, LinkedHashSet<LinkedHashSet<String>> valuations){
         for(NBATransition t : set){
             if(t.equals(target)) {
-                for (HashSet<String> s: valuations) {
+                for (LinkedHashSet<String> s: valuations) {
                     t.addValuation(s);
                 }
                 return true;
