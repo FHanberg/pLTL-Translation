@@ -11,6 +11,7 @@ public class Translator {
 
     int prelimEntries;
 
+    LinkedList<PLTLExp> canBeWeakened;
 
     HashMap<Integer, PLTLExp> WCMap;
     HashMap<Integer, PLTLExp> WCPostVal;
@@ -20,7 +21,6 @@ public class Translator {
 
     //Current formulas to be weakened
     LinkedHashSet<Integer> toWeaken;
-    boolean once = true;
     boolean opt;
 
     public Translator(){
@@ -38,6 +38,7 @@ public class Translator {
     public LinkedList<TranslationOutput> translationStep(NBAState base, LinkedList<String> atomList, boolean optimize){
         opt = optimize;
         pastLabels = 0;
+        canBeWeakened = new LinkedList<>();
         LinkedList<TranslationOutput> result = new LinkedList<>();
         setupLabels(base.getExp());
 
@@ -73,14 +74,15 @@ public class Translator {
                             if(map.containsKey(key.toString())){
                                 postPreLim.add(map.get(key.toString()));
                             }else{
-                                PLTLExp post = prelimPlusTrim(topExp, valuation);
+                                PLTLExp post = topExp.accept(new LocalAfter(), valuation);
                                 map.put(key.toString(), post);
                                 postPreLim.add(post);
+                                prelimOutputMap.put(entry, map);
                             }
                         }
                         else{
                             HashMap<String, PLTLExp> map = new HashMap<>();
-                            PLTLExp post = prelimPlusTrim(topExp, valuation);
+                            PLTLExp post = topExp.accept(new LocalAfter(), valuation);
                             map.put(key.toString(), post);
                             postPreLim.add(post);
                             prelimOutputMap.put(entry, map);
@@ -90,7 +92,7 @@ public class Translator {
                 }
                 if(!hasEntry){
                     prelimInputMap.put(prelimEntries, topExp);
-                    PLTLExp post = prelimPlusTrim(topExp, valuation);
+                    PLTLExp post = topExp.accept(new LocalAfter(), valuation);
                     HashMap<String, PLTLExp> map = new HashMap<>();
                     map.put(key.toString(), post);
                     postPreLim.add(post);
@@ -153,13 +155,6 @@ public class Translator {
             }
         }
         return result;
-    }
-
-    private PLTLExp prelimPlusTrim(PLTLExp exp, LinkedHashSet<String> valuation){
-        PLTLExp first = exp.accept(new LocalAfter(), valuation);
-        first = andTrim(first);
-        first = trueFalseTrim(first);
-        return first;
     }
 
     private LinkedList<PLTLExp> topLevelConjunction(PLTLExp exp){
@@ -286,23 +281,33 @@ public class Translator {
         return result;
     }
 
+    void pastLabeling(PLTLExp exp){
+        if(!canBeWeakened.isEmpty()) {
+            for (PLTLExp entry : canBeWeakened) {
+                if (entry.equals(exp)) {
+                    exp.pastLabel = entry.pastLabel;
+                    return;
+                }
+            }
+        }
+        exp.pastLabel = pastLabels;
+        pastLabels += 1;
+        canBeWeakened.add(exp);
+    }
 
     void setupLabels(PLTLExp exp){
 
         if(exp instanceof Unary){
             if(exp instanceof Yesterday || exp instanceof WYesterday){
-                exp.pastLabel = pastLabels;
-                pastLabels +=1;
-                setupLabels(((Unary) exp).getTarget());
+                pastLabeling(exp);
             }else{
                 exp.pastLabel = -1;
-                setupLabels(((Unary) exp).getTarget());
             }
+            setupLabels(((Unary) exp).getTarget());
 
         }else if(exp instanceof Binary){
             if (exp instanceof Since || exp instanceof WSince || exp instanceof Before || exp instanceof WBefore) {
-                exp.pastLabel = pastLabels;
-                pastLabels +=1;
+                pastLabeling(exp);
             } else if(exp instanceof Until || exp instanceof Mighty){
                 if(exp.transitionLabel == -1){
                     exp.transitionLabel = transitionLabels;

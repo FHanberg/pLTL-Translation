@@ -1,9 +1,5 @@
-import PLTL.PLTLExp;
-import PLTL.True;
-
 import java.util.Comparator;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 
 public class NBATransition {
     int m_from;

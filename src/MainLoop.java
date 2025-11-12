@@ -2,6 +2,7 @@ import PLTL.*;
 import PLTL.Future.*;
 import PLTL.Past.*;
 
+import java.util.ArrayDeque;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -23,31 +24,24 @@ public class MainLoop {
         //Primary transition output
         LinkedList<NBATransition> transitionSet = new LinkedList<>();
         //marks current states to be translated
-        LinkedHashSet<NBAState> currentSet = new LinkedHashSet<>();
+        ArrayDeque<NBAState> toBeChecked = new ArrayDeque<>();
 
         //Create initial state
         NBAState firstState = new NBAState(newTest, stateLabel);
 
         stateLabel += 1;
         mainSet.add(firstState);
-        currentSet.add(firstState);
+        toBeChecked.addLast(firstState);
 
         //Translator needs to be non-static or return the tuple (states + next U/M label)
         Translator t = new Translator();
         //Main loop of full translation
-        while(!currentSet.isEmpty()){
-            System.out.print("Set size: " + mainSet.size() + " Transition size: " + transitionSet.size() + "\n" );
-            //Storage set used to contain the states which should be checked in the next step.
-            LinkedHashSet<NBAState> nextSet = new LinkedHashSet<>();
-            //For each "fresh" state
-            System.out.println("Current Set size: " + currentSet.size());
-            int z = 1;
-            for (NBAState node: currentSet) {
-                System.out.println("Progress: " + z);
-                z++;
+            while (!toBeChecked.isEmpty()) {
+                NBAState node = toBeChecked.pop();
                 int curLabel = node.m_label;
                 //Perform a step in the main NBA-to-Büchi translation
                 LinkedList<TranslationOutput> prospective = t.translationStep(node, atoms, optimize);
+                System.out.println("Current Set size: " + toBeChecked.size());
                 System.out.println("Prospective Size: " + prospective.size());
                 //For each primary implicant:
                 for (TranslationOutput out: prospective) {
@@ -58,7 +52,7 @@ public class MainLoop {
                     // the list of upcoming states to check
                     if(equalLabel == -1){
                         next.setLabel(stateLabel);
-                        nextSet.add(next);
+                        toBeChecked.addLast(next);
                         mainSet.add(next);
 
                         //Labels are added if their corresponding U/M are NOT present
@@ -94,9 +88,6 @@ public class MainLoop {
                     }
                 }
             }
-            //replace the (now old) set of fresh states with the next set
-            currentSet = nextSet;
-        }
         transitionSet.sort(NBATransition.comp);
 
 
