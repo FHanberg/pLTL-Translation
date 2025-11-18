@@ -18,6 +18,7 @@ public class Translator {
 
     HashMap<Integer, PLTLExp> prelimInputMap;
     HashMap<Integer, HashMap<String, PLTLExp>> prelimOutputMap;
+    String key;
 
     //Current formulas to be weakened
     LinkedHashSet<Integer> toWeaken;
@@ -47,72 +48,35 @@ public class Translator {
 
         LinkedList<PLTLExp> topLevel = topLevelConjunction(base.getExp());
 
-        /*for (PLTLExp exp: topLevel) {
-            exp.accept(new FormulaReader());
-            System.out.println("");
-        }*/
-
         LinkedHashSet<LinkedHashSet<String>> valuations = getAllValuations(atomList, 0, new LinkedHashSet<>());
         for (LinkedHashSet<String> valuation : valuations) {
-             StringBuilder key = new StringBuilder();
+             StringBuilder keyBuild = new StringBuilder();
                 for (String string : valuation) {
-                    key.append(string);
+                    keyBuild.append(string);
                 }
+                key = keyBuild.toString();
             LinkedList<PLTLExp> postPreLim = new LinkedList<>();
+            boolean earlyEnd = false;
             for (PLTLExp topExp: topLevel) {
                 if(prelimInputMap.isEmpty()){
                     prelimInputMap.put(prelimEntries, topExp);
                     prelimEntries += 1;
                 }
-                boolean hasEntry = false;
-                for (Integer entry: prelimInputMap.keySet()) {
-
-                    if(topExp.equals(prelimInputMap.get(entry))){
-                        hasEntry = true;
-                        if(prelimOutputMap.containsKey(entry)) {
-                            HashMap<String, PLTLExp> map = prelimOutputMap.get(entry);
-                            if(map.containsKey(key.toString())){
-                                postPreLim.add(map.get(key.toString()));
-                            }else{
-                                PLTLExp post = topExp.accept(new LocalAfter(), valuation);
-                                map.put(key.toString(), post);
-                                postPreLim.add(post);
-                                prelimOutputMap.put(entry, map);
-                            }
-                        }
-                        else{
-                            HashMap<String, PLTLExp> map = new HashMap<>();
-                            PLTLExp post = topExp.accept(new LocalAfter(), valuation);
-                            map.put(key.toString(), post);
-                            postPreLim.add(post);
-                            prelimOutputMap.put(entry, map);
-                        }
-                        break;
-                    }
+                PLTLExp post = translationActual(topExp, valuation);
+                if(post instanceof True || post instanceof False){
+                    addResult(result, post, valuation);
+                    earlyEnd = true;
+                    break;
                 }
-                if(!hasEntry){
-                    prelimInputMap.put(prelimEntries, topExp);
-                    PLTLExp post = topExp.accept(new LocalAfter(), valuation);
-                    HashMap<String, PLTLExp> map = new HashMap<>();
-                    map.put(key.toString(), post);
-                    postPreLim.add(post);
-                    prelimOutputMap.put(prelimEntries, map);
-                    prelimEntries += 1;
-                }
+                postPreLim.add(post);
 
             }
-
-
-            PLTLExp prelim = topLevelMerge(postPreLim);
-            //PLTLExp prelim = base.getExp().accept(new LocalAfter(), valuation);
-            if(prelim instanceof True || prelim instanceof False) {
-                addResult(result, prelim, valuation);
+            if(earlyEnd)
                 continue;
-            }
 
             WCPostVal = new HashMap<>();
             for(Integer n : WCMap.keySet()){
-                WCPostVal.put(n, WCMap.get(n).accept(new LocalAfter(), valuation));
+                WCPostVal.put(n, translationActual(WCMap.get(n), valuation));
             }
             for (LinkedHashSet<Integer> C : getAllSubsets(pastLabels, 0, new LinkedHashSet<>())) {
                 toWeaken = C;
@@ -138,7 +102,6 @@ public class Translator {
                     list.add(pre.accept(new PostUpdateHandler(), valuation));
                 }
                 PLTLExp current = topLevelMerge(list);
-                //PLTLExp current = prelim.accept(new PostUpdateHandler(), valuation);
                 if (optimize) {
                     if(!(wcActual instanceof True))
                         current = new And(current, wcActual);
@@ -155,6 +118,39 @@ public class Translator {
             }
         }
         return result;
+    }
+
+    private PLTLExp translationActual(PLTLExp exp, LinkedHashSet<String> valuation){
+        for (Integer entry: prelimInputMap.keySet()) {
+
+            if(exp.equals(prelimInputMap.get(entry))){
+                if(prelimOutputMap.containsKey(entry)) {
+                    HashMap<String, PLTLExp> map = prelimOutputMap.get(entry);
+                    if(map.containsKey(key)){
+                        return map.get(key);
+                    }else{
+                        PLTLExp post = exp.accept(new LocalAfter(), valuation);
+                        map.put(key, post);
+                        prelimOutputMap.put(entry, map);
+                        return post;
+                    }
+                }
+                else{
+                    HashMap<String, PLTLExp> map = new HashMap<>();
+                    PLTLExp post = exp.accept(new LocalAfter(), valuation);
+                    map.put(key, post);
+                    prelimOutputMap.put(entry, map);
+                    return post;
+                }
+            }
+        }
+        prelimInputMap.put(prelimEntries, exp);
+        PLTLExp post = exp.accept(new LocalAfter(), valuation);
+        HashMap<String, PLTLExp> map = new HashMap<>();
+        map.put(key, post);
+        prelimOutputMap.put(prelimEntries, map);
+        prelimEntries += 1;
+        return post;
     }
 
     private LinkedList<PLTLExp> topLevelConjunction(PLTLExp exp){
@@ -373,10 +369,10 @@ public class Translator {
 
         @Override
         public PLTLExp visit(And exp, LinkedHashSet<String> args) {
-            PLTLExp left = exp.getLeft().accept(new LocalAfter(), args);
+            PLTLExp left = translationActual(exp.getLeft(), args);
             if(left instanceof False)
                 return new False();
-            PLTLExp right = exp.getRight().accept(new LocalAfter(), args);
+            PLTLExp right = translationActual(exp.getRight(), args);
             if(right instanceof False){
                 return new False();
             }
@@ -393,10 +389,10 @@ public class Translator {
 
         @Override
         public PLTLExp visit(Or exp, LinkedHashSet<String> args) {
-            PLTLExp left = exp.getLeft().accept(new LocalAfter(), args);
+            PLTLExp left = translationActual(exp.getLeft(), args);
             if(left instanceof True)
                 return new True();
-            PLTLExp right = exp.getRight().accept(new LocalAfter(), args);
+            PLTLExp right = translationActual(exp.getRight(), args);
             if(right instanceof True){
                 return new True();
             }
@@ -450,19 +446,24 @@ public class Translator {
 
         @Override
         public PLTLExp visit(Until exp, LinkedHashSet<String> args) {
-            PLTLExp right = exp.getRight().accept(new LocalAfter(), args);
-            return new Or(right, new And(exp.getLeft().accept(new LocalAfter(), args), exp));
+            PLTLExp left = translationActual(exp.getLeft(), args);
+            PLTLExp right = translationActual(exp.getRight(), args);
+            return new Or(right, new And(left, exp));
         }
         @Override
         public PLTLExp visit(WUntil exp, LinkedHashSet<String> args) {
-            return new Or(exp.getRight().accept(new LocalAfter(), args),
-                    new And(exp.getLeft().accept(new LocalAfter(), args), exp));
+            PLTLExp left = translationActual(exp.getLeft(), args);
+            PLTLExp right = translationActual(exp.getRight(), args);
+            return new Or(right,
+                    new And(left, exp));
         }
 
         @Override
         public PLTLExp visit(Mighty exp, LinkedHashSet<String> args) {
-            return new And(exp.getRight().accept(new LocalAfter(), args),
-                    new Or(exp.getLeft().accept(new LocalAfter(), args), exp));
+            PLTLExp left = translationActual(exp.getLeft(), args);
+            PLTLExp right = translationActual(exp.getRight(), args);
+            return new And(right,
+                    new Or(left, exp));
         }
 
 
@@ -495,32 +496,34 @@ public class Translator {
 
         @Override
         public PLTLExp visit(Release exp, LinkedHashSet<String> args) {
-            return new And(exp.getRight().accept(new LocalAfter(), args),
-                    new Or(exp.getLeft().accept(new LocalAfter(), args), exp));
+            PLTLExp left = translationActual(exp.getLeft(), args);
+            PLTLExp right = translationActual(exp.getRight(), args);
+            return new And(right,
+                    new Or(left, exp));
         }
 
 
         @Override
         public PLTLExp visit(Since exp, LinkedHashSet<String> args) {
-            return exp.getRight().accept(new LocalAfter(), args);
+            return translationActual(exp.getRight(), args);
         }
 
         @Override
         public PLTLExp visit(WSince exp, LinkedHashSet<String> args) {
             if(exp.getLeft() instanceof True)
                 return new True();
-            return new Or(exp.getLeft(), exp.getRight()).accept(new LocalAfter(), args);
+            return translationActual(new Or(exp.getLeft(), exp.getRight()), args);
         }
 
 
         @Override
         public PLTLExp visit(Before exp, LinkedHashSet<String> args) {
-            return new And(exp.getLeft(), exp.getRight()).accept(new LocalAfter(), args);
+            return translationActual(new And(exp.getLeft(), exp.getRight()), args);
         }
 
         @Override
         public PLTLExp visit(WBefore exp, LinkedHashSet<String> args) {
-            return exp.getRight().accept(new LocalAfter(), args);
+            return translationActual(exp.getRight(), args);
         }
 
 

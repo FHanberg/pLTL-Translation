@@ -37,11 +37,11 @@ public class MainLoop {
         Translator t = new Translator();
         //Main loop of full translation
             while (!toBeChecked.isEmpty()) {
+                System.out.println("Current Set size: " + toBeChecked.size());
                 NBAState node = toBeChecked.pop();
                 int curLabel = node.m_label;
                 //Perform a step in the main NBA-to-Büchi translation
                 LinkedList<TranslationOutput> prospective = t.translationStep(node, atoms, optimize);
-                System.out.println("Current Set size: " + toBeChecked.size());
                 System.out.println("Prospective Size: " + prospective.size());
                 //For each primary implicant:
                 for (TranslationOutput out: prospective) {
@@ -87,6 +87,7 @@ public class MainLoop {
 
                     }
                 }
+                System.out.println("step done");
             }
         transitionSet.sort(NBATransition.comp);
 
