@@ -94,7 +94,7 @@ public class Translator {
                     }
                 }
                 if(!valid){
-                    addResult(result, new False(), valuation);
+                    //addResult(result, new False(), valuation);
                     continue;
                 }
                 LinkedList<PLTLExp> list = new LinkedList<>();

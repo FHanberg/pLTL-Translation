@@ -122,15 +122,12 @@ public class Output {
         }else if(converted.size() == 1){
             //There's only one valuation, so return it
             return converted;
+        }else if(converted.isEmpty()){
+            result = new HashSet<>();
+            result.add(new HashSet<>());
+            return result;
         }else{
-            for (HashSet<String> set: converted) {
-                if(set.isEmpty()){
-                    result = new HashSet<>();
-                    result.add(new HashSet<>());
-                    break;
-                }
-                result.add(set);
-            }
+            return converted;
         }
         return result;
     }
