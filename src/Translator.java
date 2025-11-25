@@ -22,6 +22,9 @@ public class Translator {
 
     //Current formulas to be weakened
     LinkedHashSet<Integer> toWeaken;
+
+    LinkedHashSet<Integer> oldObligations;
+    LinkedHashSet<Integer> newObligations;
     boolean opt;
 
     public Translator(){
@@ -40,6 +43,7 @@ public class Translator {
         opt = optimize;
         pastLabels = 0;
         canBeWeakened = new LinkedList<>();
+        oldObligations = obligationFinder(base.getExp());
         LinkedList<TranslationOutput> result = new LinkedList<>();
         setupLabels(base.getExp());
 
@@ -50,6 +54,7 @@ public class Translator {
 
         LinkedHashSet<LinkedHashSet<String>> valuations = getAllValuations(atomList, 0, new LinkedHashSet<>());
         for (LinkedHashSet<String> valuation : valuations) {
+            newObligations = new LinkedHashSet<>();
              StringBuilder keyBuild = new StringBuilder();
                 for (String string : valuation) {
                     keyBuild.append(string);
@@ -127,9 +132,18 @@ public class Translator {
                 if(prelimOutputMap.containsKey(entry)) {
                     HashMap<String, PLTLExp> map = prelimOutputMap.get(entry);
                     if(map.containsKey(key)){
-                        return map.get(key);
+                        PLTLExp post = map.get(key);
+                        if(!(post instanceof True) && !(post instanceof False))
+                            post.obligation = exp.obligation;
+                        else
+                            post.obligation = -1;
+                        return post;
                     }else{
                         PLTLExp post = exp.accept(new LocalAfter(), valuation);
+                        if(!(post instanceof True) && !(post instanceof False))
+                            post.obligation = exp.obligation;
+                        else
+                            post.obligation = -1;
                         map.put(key, post);
                         prelimOutputMap.put(entry, map);
                         return post;
@@ -138,6 +152,10 @@ public class Translator {
                 else{
                     HashMap<String, PLTLExp> map = new HashMap<>();
                     PLTLExp post = exp.accept(new LocalAfter(), valuation);
+                    if(!(post instanceof True) && !(post instanceof False))
+                        post.obligation = exp.obligation;
+                    else
+                        post.obligation = -1;
                     map.put(key, post);
                     prelimOutputMap.put(entry, map);
                     return post;
@@ -146,6 +164,10 @@ public class Translator {
         }
         prelimInputMap.put(prelimEntries, exp);
         PLTLExp post = exp.accept(new LocalAfter(), valuation);
+        if(!(post instanceof True) && !(post instanceof False))
+            post.obligation = exp.obligation;
+        else
+            post.obligation = -1;
         HashMap<String, PLTLExp> map = new HashMap<>();
         map.put(key, post);
         prelimOutputMap.put(prelimEntries, map);
@@ -176,13 +198,43 @@ public class Translator {
     }
 
     private void addResult(LinkedList<TranslationOutput> target, PLTLExp exp, LinkedHashSet<String> val){
+        LinkedHashSet<Integer> remainingObs = obligationFinder(exp);
+        LinkedHashSet<Integer> clearedObs = new LinkedHashSet<>();
+        if(!(exp instanceof False)) {
+            for (Integer x : oldObligations) {
+                if (!remainingObs.contains(x))
+                    clearedObs.add(x);
+            }
+            for (Integer x : newObligations) {
+                if (!remainingObs.contains(x))
+                    clearedObs.add(x);
+            }
+        }
         for (TranslationOutput out: target) {
             if(out.getTo().equals(exp)) {
                 out.addVal(val);
+                out.addObs(clearedObs);
                 return;
             }
         }
-        target.add(new TranslationOutput(exp, val));
+        TranslationOutput result = new TranslationOutput(exp, val);
+        result.addObs(clearedObs);
+        target.add(result);
+    }
+
+    public static LinkedHashSet<Integer> obligationFinder (PLTLExp exp){
+        LinkedHashSet<Integer> result = new LinkedHashSet<>();
+        if(exp.obligation != -1){
+            result.add(exp.obligation);
+        }
+        if(exp instanceof Binary){
+            result.addAll(obligationFinder(((Binary) exp).getLeft()));
+            result.addAll(obligationFinder(((Binary) exp).getRight()));
+        }
+        if(exp instanceof Unary){
+            result.addAll(obligationFinder(((Unary) exp).getTarget()));
+        }
+        return result;
     }
 
     //Checks And statements for True/False and trims accordingly
@@ -446,24 +498,31 @@ public class Translator {
 
         @Override
         public PLTLExp visit(Until exp, LinkedHashSet<String> args) {
+            newObligations.add(exp.transitionLabel);
             PLTLExp left = translationActual(exp.getLeft(), args);
             PLTLExp right = translationActual(exp.getRight(), args);
-            return new Or(right, new And(left, exp));
+            PLTLExp rCopy = right.accept(new DeepCopy());
+            rCopy.obligation = exp.transitionLabel;
+            return new Or(rCopy, new And(left, exp));
         }
         @Override
         public PLTLExp visit(WUntil exp, LinkedHashSet<String> args) {
             PLTLExp left = translationActual(exp.getLeft(), args);
             PLTLExp right = translationActual(exp.getRight(), args);
-            return new Or(right,
+            PLTLExp rCopy = right.accept(new DeepCopy());
+            return new Or(rCopy,
                     new And(left, exp));
         }
 
         @Override
         public PLTLExp visit(Mighty exp, LinkedHashSet<String> args) {
+            newObligations.add(exp.transitionLabel);
             PLTLExp left = translationActual(exp.getLeft(), args);
+            PLTLExp lCopy = left.accept(new DeepCopy());
+            lCopy.obligation = exp.transitionLabel;
             PLTLExp right = translationActual(exp.getRight(), args);
             return new And(right,
-                    new Or(left, exp));
+                    new Or(lCopy, exp));
         }
 
 
@@ -497,9 +556,10 @@ public class Translator {
         @Override
         public PLTLExp visit(Release exp, LinkedHashSet<String> args) {
             PLTLExp left = translationActual(exp.getLeft(), args);
+            PLTLExp lCopy = left.accept(new DeepCopy());
             PLTLExp right = translationActual(exp.getRight(), args);
             return new And(right,
-                    new Or(left, exp));
+                    new Or(lCopy, exp));
         }
 
 
@@ -974,6 +1034,188 @@ public class Translator {
         @Override
         public PLTLExp visit(Not exp) {
             return null;
+        }
+    }
+
+    class DeepCopy implements PLTLExp.Visitor<PLTLExp>{
+        public void generalCopy(PLTLExp copy, PLTLExp of){
+            copy.obligation = of.obligation;
+            copy.pastLabel = of.pastLabel;
+            copy.transitionLabel = of.transitionLabel;
+        }
+
+        @Override
+        public PLTLExp visit(And exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            And copy = new And(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Or exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            Or copy = new Or(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Term exp) {
+            Term copy = new Term(exp.m_term);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(NotTerm exp) {
+            NotTerm copy = new NotTerm(exp.m_term);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(True exp) {
+            True copy = new True();
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(False exp) {
+            False copy = new False();
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Globally exp) {
+            Globally copy = new Globally(exp.getTarget().accept(new DeepCopy()));
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Historically exp) {
+            Historically copy = new Historically(exp.getTarget().accept(new DeepCopy()));
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Until exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            Until copy = new Until(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(WUntil exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            WUntil copy = new WUntil(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Mighty exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            Mighty copy = new Mighty(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Future exp) {
+            Future copy = new Future(exp.getTarget().accept(new DeepCopy()));
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Once exp) {
+            Once copy = new Once(exp.getTarget().accept(new DeepCopy()));
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Next exp) {
+            Next copy = new Next(exp.getTarget().accept(new DeepCopy()));
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Yesterday exp) {
+            Yesterday copy = new Yesterday(exp.getTarget().accept(new DeepCopy()));
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(WYesterday exp) {
+            WYesterday copy = new WYesterday(exp.getTarget().accept(new DeepCopy()));
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Release exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            Release copy = new Release(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Since exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            Since copy = new Since(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(WSince exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            WSince copy = new WSince(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Before exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            Before copy = new Before(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(WBefore exp) {
+            PLTLExp left = exp.getLeft().accept(new DeepCopy());
+            PLTLExp right = exp.getRight().accept(new DeepCopy());
+            WBefore copy = new WBefore(left,right);
+            generalCopy(copy, exp);
+            return copy;
+        }
+
+        @Override
+        public PLTLExp visit(Not exp) {
+            Not copy = new Not(exp.getTarget().accept(new DeepCopy()));
+            generalCopy(copy, exp);
+            return copy;
         }
     }
 

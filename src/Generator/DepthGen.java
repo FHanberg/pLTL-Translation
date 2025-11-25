@@ -309,16 +309,14 @@ public class DepthGen {
     }
 
     private GenStructure PastGen(){
-        int rand = Random(0, 7);
+        int rand = Random(0, 5);
         return switch (rand) {
             case 0 -> new GenBinary(GenCodes.B);
             case 1 -> new GenUnary(GenCodes.H);
             case 2 -> new GenUnary(GenCodes.O);
             case 3 -> new GenBinary(GenCodes.S);
             case 4 -> new GenBinary(GenCodes.WB);
-            case 5 -> new GenBinary(GenCodes.WS);
-            case 6 -> new GenUnary(GenCodes.WY);
-            default -> new GenUnary(GenCodes.Y);
+            default -> new GenBinary(GenCodes.WS);
         };
 
     }
@@ -338,18 +336,21 @@ public class DepthGen {
 
     private GenStructure TerminalGen(){
         int rand = Random(2, 4);
-        switch (rand){
-            case 0:
+        switch (rand) {
+            case 0 -> {
                 return new GenTerminal(FALSE);
-            case 1:
+            }
+            case 1 -> {
                 return new GenTerminal(GenCodes.TRUE);
-            default:
+            }
+            default -> {
                 GenTerminal term = new GenTerminal(GenCodes.TERM);
                 term.term = getChar(m_curVar);
-                m_curVar +=1;
-                if(m_curVar >= m_maxVar)
+                m_curVar += 1;
+                if (m_curVar >= m_maxVar)
                     m_curVar = 0;
                 return term;
+            }
         }
     }
 

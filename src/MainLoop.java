@@ -64,6 +64,7 @@ public class MainLoop {
                                     transLabels.add(i);
                                 }
                             }
+                            transLabels.addAll(out.getObs());
                         }
                         transitionSet.add(new NBATransition(curLabel, stateLabel, transLabels, out.getVals()));
                         stateLabel += 1;
@@ -80,6 +81,7 @@ public class MainLoop {
                                             transLabels.add(i);
                                         }
                                     }
+                                    transLabels.addAll(out.getObs());
                                 }
                                 transitionSet.add(new NBATransition(curLabel, equalLabel, transLabels, out.getVals()));
 

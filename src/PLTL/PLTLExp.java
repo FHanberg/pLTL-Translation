@@ -4,19 +4,21 @@ import PLTL.Future.*;
 import PLTL.Past.*;
 
 //Main abstract class for formulas
-public abstract class PLTLExp {
+public abstract class PLTLExp{
     public int transitionLabel; //marks Until and Mighty
     public int pastLabel; //marks past subformulae
 
-    public int genLabel; //used for keymapping
+    public int obligation; //for marking until/mighty completion conditions
 
     public PLTLExp(){
         pastLabel = -1;
         transitionLabel = -1;
+        obligation = -1;
     }
 
 
     public abstract <R> R accept(Visitor<R> v);
+
     public interface Visitor <R> {
         R visit(And exp);
         R visit(Or exp);

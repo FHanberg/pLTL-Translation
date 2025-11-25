@@ -30,11 +30,11 @@ public class ArbiterGen {
             builder.append(getChar(i));
             builder.append(" -> F g");
             builder.append(getChar(i));
-            builder.append(" )) & ((!g");
+            builder.append(" )) & (F((!g");
             builder.append(getChar(i));
             builder.append(") W r");
             builder.append(getChar(i));
-            builder.append(") & (G( g");
+            builder.append(")) & (G( g");
             builder.append(getChar(i));
             builder.append(" -> X((!g");
             builder.append(getChar(i));

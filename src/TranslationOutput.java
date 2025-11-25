@@ -9,11 +9,13 @@ public class TranslationOutput {
 
     private PLTLExp m_to;
     private LinkedHashSet<LinkedHashSet<String>> m_valuations;
+    private LinkedHashSet<Integer> m_obligations;
 
     public TranslationOutput(PLTLExp to, LinkedHashSet<String> first_val){
         m_to = to;
         m_valuations = new LinkedHashSet<>();
         m_valuations.add(first_val);
+        m_obligations = new LinkedHashSet<>();
     }
 
     public PLTLExp getTo(){
@@ -36,5 +38,13 @@ public class TranslationOutput {
         }
         if(fresh)
             m_valuations.add(val);
+    }
+
+    public void addObs(LinkedHashSet<Integer> obs){
+        m_obligations.addAll(obs);
+    }
+
+    public LinkedHashSet<Integer> getObs(){
+        return m_obligations;
     }
 }
