@@ -35,11 +35,16 @@ public class MainLoop {
 
         //Translator needs to be non-static or return the tuple (states + next U/M label)
         Translator t = new Translator();
+        boolean first = true;
         //Main loop of full translation
             while (!toBeChecked.isEmpty()) {
                 System.out.println("Current Set size: " + toBeChecked.size());
                 NBAState node = toBeChecked.pop();
                 int curLabel = node.m_label;
+                if(first){
+                    first = false;
+                    t.setup(node, atoms);
+                }
                 //Perform a step in the main NBA-to-Büchi translation
                 LinkedList<TranslationOutput> prospective = t.translationStep(node, atoms, optimize);
                 System.out.println("Prospective Size: " + prospective.size());

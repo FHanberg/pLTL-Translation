@@ -12,12 +12,15 @@ public class Translator {
     int prelimEntries;
 
     LinkedList<PLTLExp> canBeWeakened;
-
-    HashMap<Integer, PLTLExp> WCMap;
-    HashMap<Integer, PLTLExp> WCPostVal;
+    HashMap<Integer, HashMap<String, HashMap<LinkedHashSet<Integer>, PLTLExp>>> WCPrelims;
+    HashMap<PLTLExp, LinkedHashSet<PLTLExp>> ImplicantMap;
+    HashMap<Integer, Boolean> currentlyWeak;
 
     HashMap<Integer, PLTLExp> prelimInputMap;
     HashMap<Integer, HashMap<String, PLTLExp>> prelimOutputMap;
+    LinkedHashSet<LinkedHashSet<String>> allVals;
+    LinkedHashSet<LinkedHashSet<Integer>> allWC;
+
     String key;
 
     //Current formulas to be weakened
@@ -33,6 +36,20 @@ public class Translator {
         prelimEntries = 0;
         prelimInputMap = new HashMap<>();
         prelimOutputMap = new HashMap<>();
+        WCPrelims = new HashMap<>();
+        allVals = new LinkedHashSet<>();
+        allWC = new LinkedHashSet<>();
+        ImplicantMap = new HashMap<>();
+    }
+
+    public void setup(NBAState base, LinkedList<String> atomList){
+        canBeWeakened = new LinkedList<>();
+        allVals = getAllValuations(atomList, 0, new LinkedHashSet<>());
+        setupLabels(base.getExp());
+        allWC = getAllSubsets(pastLabels, 0, new LinkedHashSet<>());
+        setWC(base.getExp());
+        currentlyWeak = new HashMap<>();
+        currentWeak(base.getExp());
     }
 
     public int getTransitionLabels(){
@@ -41,19 +58,18 @@ public class Translator {
 
     public LinkedList<TranslationOutput> translationStep(NBAState base, LinkedList<String> atomList, boolean optimize){
         opt = optimize;
-        pastLabels = 0;
-        canBeWeakened = new LinkedList<>();
         oldObligations = obligationFinder(base.getExp());
         LinkedList<TranslationOutput> result = new LinkedList<>();
-        setupLabels(base.getExp());
-
-        WCMap = new HashMap<>();
-        setWC(base.getExp());
-
+        currentWeak(base.getExp());
+        LinkedHashSet<Integer> currentWeakSubs = new LinkedHashSet<>();
+        for (Integer i: currentlyWeak.keySet()) {
+            if(currentlyWeak.get(i))
+                currentWeakSubs.add(i);
+        }
         LinkedList<PLTLExp> topLevel = topLevelConjunction(base.getExp());
 
-        LinkedHashSet<LinkedHashSet<String>> valuations = getAllValuations(atomList, 0, new LinkedHashSet<>());
-        for (LinkedHashSet<String> valuation : valuations) {
+
+        for (LinkedHashSet<String> valuation : allVals) {
             newObligations = new LinkedHashSet<>();
              StringBuilder keyBuild = new StringBuilder();
                 for (String string : valuation) {
@@ -79,17 +95,13 @@ public class Translator {
             if(earlyEnd)
                 continue;
 
-            WCPostVal = new HashMap<>();
-            for(Integer n : WCMap.keySet()){
-                WCPostVal.put(n, translationActual(WCMap.get(n), valuation));
-            }
-            for (LinkedHashSet<Integer> C : getAllSubsets(pastLabels, 0, new LinkedHashSet<>())) {
+            for (LinkedHashSet<Integer> C : allWC) {
                 toWeaken = C;
                 boolean valid = true;
                 PLTLExp wcActual = new True();
                 if (optimize && !C.isEmpty()) {
                     for (Integer num : C) {
-                        PLTLExp add = WCPostVal.get(num);
+                        PLTLExp add = WCPrelims.get(num).get(key).get(currentWeakSubs);
                         if (add instanceof False) {
                             valid = false;
                             break;
@@ -113,12 +125,20 @@ public class Translator {
                 }
                 PLTLExp partTrim = trueFalseTrim(current);
                 PLTLExp fullTrim = andTrim(partTrim);
-                PLTLExp rewritten = fullTrim.accept(new DNF());
-
-                LinkedHashSet<PLTLExp> implicants = primeImplicants(rewritten);
+                LinkedHashSet<PLTLExp> implicants;
+                if(!ImplicantMap.containsKey(fullTrim)) {
+                    PLTLExp rewritten = fullTrim.accept(new DNF());
+                    implicants = primeImplicants(rewritten);
+                    LinkedHashSet<PLTLExp> trimmed = new LinkedHashSet<>();
+                    for (PLTLExp exp: implicants) {
+                        PLTLExp trimOne = trueFalseTrim(exp);
+                        trimmed.add(andTrim(trimOne));
+                    }
+                    ImplicantMap.put(fullTrim, trimmed);
+                }
+                implicants = ImplicantMap.get(fullTrim);
                 for (PLTLExp exp : implicants) {
-                    PLTLExp trimOne = trueFalseTrim(exp);
-                    addResult(result, andTrim(trimOne), valuation);
+                    addResult(result, exp, valuation);
                 }
             }
         }
@@ -399,21 +419,70 @@ public class Translator {
     void setWC(PLTLExp exp){
         if(exp instanceof Unary){
             if(exp instanceof Yesterday || exp instanceof WYesterday){
-                WCMap.put(exp.pastLabel, ((Unary)exp).getTarget());
+                setupWC(exp.pastLabel,((Unary)exp).getTarget(),((Unary)exp).getTarget());
             }
             setWC(((Unary) exp).getTarget());
         }else if(exp instanceof Binary){
                 if (exp instanceof Since) {
-                    WCMap.put(exp.pastLabel, ((Since)exp).getRight());
+                    setupWC(exp.pastLabel, (new Or(((Since) exp).getLeft(),((Since) exp).getRight())), ((Since)exp).getRight());
                 } else if (exp instanceof WSince) {
-                    WCMap.put(exp.pastLabel, (new Or(((WSince) exp).getLeft(),((WSince) exp).getRight())));
+                    setupWC(exp.pastLabel, (new Or(((WSince) exp).getLeft(),((WSince) exp).getRight())), ((WSince)exp).getRight());
                 } else if (exp instanceof Before) {
-                    WCMap.put(exp.pastLabel, (new And(((Before) exp).getLeft(),((Before) exp).getRight())));
+                    setupWC(exp.pastLabel, ((Before) exp).getRight(), (new And(((Before) exp).getLeft(),((Before) exp).getRight())));
                 } else if (exp instanceof WBefore) {
-                    WCMap.put(exp.pastLabel, ((WBefore) exp).getRight());
+                    setupWC(exp.pastLabel, ((WBefore) exp).getRight(), (new And(((WBefore) exp).getLeft(),((WBefore) exp).getRight())));
                 }
             setWC(((Binary)exp).getLeft());
             setWC(((Binary)exp).getRight());
+        }
+    }
+
+    void currentWeak(PLTLExp exp){
+        if(exp instanceof Unary){
+            if(exp instanceof Yesterday){
+                currentlyWeak.put(exp.pastLabel, false);
+            }else if(exp instanceof  WYesterday)
+                currentlyWeak.put(exp.pastLabel, true);
+            currentWeak(((Unary) exp).getTarget());
+        }else if(exp instanceof Binary){
+            if (exp instanceof Since) {
+                currentlyWeak.put(exp.pastLabel, false);
+            } else if (exp instanceof WSince) {
+                currentlyWeak.put(exp.pastLabel, true);
+            } else if (exp instanceof Before) {
+                currentlyWeak.put(exp.pastLabel, false);
+            } else if (exp instanceof WBefore) {
+                currentlyWeak.put(exp.pastLabel, true);
+            }
+            currentWeak(((Binary)exp).getLeft());
+            currentWeak(((Binary)exp).getRight());
+        }
+    }
+
+    void setupWC(int label, PLTLExp weak, PLTLExp strong){
+        if(!WCPrelims.containsKey(label)){
+            HashMap<String, HashMap<LinkedHashSet<Integer>, PLTLExp>> map = new HashMap<>();
+            for (LinkedHashSet<String> valuation: allVals) {
+                StringBuilder keyBuild = new StringBuilder();
+                for (String string : valuation) {
+                    keyBuild.append(string);
+                }
+                key = keyBuild.toString();
+                HashMap<LinkedHashSet<Integer>, PLTLExp> inner = new HashMap<>();
+                for(LinkedHashSet<Integer> C : allWC){
+                    toWeaken = C;
+                    PLTLExp postupdate;
+                    if(C.contains(label)){
+                        postupdate = weak.accept(new PostUpdateHandler(), valuation);
+                    }else{
+                        postupdate = strong.accept(new PostUpdateHandler(), valuation);
+                    }
+                    PLTLExp eval = translationActual(postupdate, valuation);
+                    inner.put(C, eval);
+                }
+                map.put(key,inner);
+            }
+            WCPrelims.put(label, map);
         }
     }
 
@@ -749,7 +818,7 @@ public class Translator {
 
             if(!opt) {
                 for (Integer n : toWeaken) {
-                    PLTLExp add = WCPostVal.get(n);
+                    PLTLExp add = WCPrelims.get(n).get(key).get(toWeaken);
                     if(add instanceof False)
                         return new False();
                     add = add.accept(new PostUpdateHandler(), args);
@@ -845,16 +914,28 @@ public class Translator {
 
         @Override
         public PLTLExp visit(Yesterday exp) {
-            if(toWeaken.contains(exp.pastLabel))
-                return new WYesterday(exp.getTarget().accept(new Weakening()));
-            return new Yesterday(exp.getTarget().accept(new Weakening()));
+            PLTLExp ret;
+            if(toWeaken.contains(exp.pastLabel)) {
+                ret = new WYesterday(exp.getTarget().accept(new Weakening()));
+                ret.pastLabel = exp.pastLabel;
+                return ret;
+            }
+            ret = new Yesterday(exp.getTarget().accept(new Weakening()));
+            ret.pastLabel = exp.pastLabel;
+            return ret;
         }
 
         @Override
         public PLTLExp visit(WYesterday exp) {
-            if(toWeaken.contains(exp.pastLabel))
-                return new WYesterday(exp.getTarget().accept(new Weakening()));
-            return new Yesterday(exp.getTarget().accept(new Weakening()));
+            PLTLExp ret;
+            if(toWeaken.contains(exp.pastLabel)) {
+                ret = new WYesterday(exp.getTarget().accept(new Weakening()));
+                ret.pastLabel = exp.pastLabel;
+                return ret;
+            }
+            ret = new Yesterday(exp.getTarget().accept(new Weakening()));
+            ret.pastLabel = exp.pastLabel;
+            return ret;
         }
 
 
@@ -867,34 +948,58 @@ public class Translator {
 
         @Override
         public PLTLExp visit(Since exp) {
-            if(toWeaken.contains(exp.pastLabel))
-                return new WSince(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
-            return new Since(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
+            PLTLExp ret;
+            if(toWeaken.contains(exp.pastLabel)) {
+                ret = new WSince(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
+                ret.pastLabel = exp.pastLabel;
+                return ret;
+            }
+            ret = new Since(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
+            ret.pastLabel = exp.pastLabel;
+            return ret;
         }
 
         @Override
         public PLTLExp visit(WSince exp) {
-            if(toWeaken.contains(exp.pastLabel))
-                return new WSince(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
-            return new Since(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
+            PLTLExp ret;
+            if(toWeaken.contains(exp.pastLabel)) {
+                ret = new WSince(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
+                ret.pastLabel = exp.pastLabel;
+                return ret;
+            }
+            ret = new Since(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
+            ret.pastLabel = exp.pastLabel;
+            return ret;
         }
 
 
 
         @Override
         public PLTLExp visit(Before exp) {
-            if(toWeaken.contains(exp.pastLabel))
-                return new WBefore(exp.getLeft().accept(new Weakening()),exp.getRight().accept(new Weakening()));
-            return new Before(exp.getLeft().accept(new Weakening()),exp.getRight().accept(new Weakening()));
+            PLTLExp ret;
+            if(toWeaken.contains(exp.pastLabel)) {
+                ret = new WBefore(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
+                ret.pastLabel = exp.pastLabel;
+                return ret;
+            }
+            ret = new Before(exp.getLeft().accept(new Weakening()),exp.getRight().accept(new Weakening()));
+            ret.pastLabel = exp.pastLabel;
+            return ret;
         }
 
 
 
         @Override
         public PLTLExp visit(WBefore exp) {
-            if(toWeaken.contains(exp.pastLabel))
-                return new WBefore(exp.getLeft().accept(new Weakening()),exp.getRight().accept(new Weakening()));
-            return new Before(exp.getLeft().accept(new Weakening()),exp.getRight().accept(new Weakening()));
+            PLTLExp ret;
+            if(toWeaken.contains(exp.pastLabel)) {
+                ret = new WBefore(exp.getLeft().accept(new Weakening()), exp.getRight().accept(new Weakening()));
+                ret.pastLabel = exp.pastLabel;
+                return ret;
+            }
+            ret = new Before(exp.getLeft().accept(new Weakening()),exp.getRight().accept(new Weakening()));
+            ret.pastLabel = exp.pastLabel;
+            return ret;
         }
 
 
