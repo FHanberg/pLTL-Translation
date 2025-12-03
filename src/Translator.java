@@ -19,7 +19,8 @@ public class Translator {
     HashMap<PLTLExp, LinkedHashSet<PLTLExp>> ImplicantMap;
     HashMap<Integer, Boolean> currentlyWeak;
 
-    HashMap<Integer, PLTLExp> prelimInputMap;
+    HashMap<PLTLExp, Integer> prelimInputMap;
+    //HashMap<Integer, PLTLExp> prelimInputMap;
     HashMap<Integer, HashMap<String, PLTLExp>> prelimOutputMap;
     LinkedHashSet<LinkedHashSet<String>> allVals;
     LinkedHashSet<LinkedHashSet<Integer>> allWC;
@@ -86,7 +87,8 @@ public class Translator {
             boolean earlyEnd = false;
             for (PLTLExp topExp: topLevel) {
                 if(prelimInputMap.isEmpty()){
-                    prelimInputMap.put(prelimEntries, topExp);
+                    //prelimInputMap.put(prelimEntries, topExp);
+                    prelimInputMap.put(topExp, prelimEntries);
                     prelimEntries += 1;
                 }
                 PLTLExp post = translationActual(topExp, valuation);
@@ -154,9 +156,11 @@ public class Translator {
     }
 
     private PLTLExp translationActual(PLTLExp exp, LinkedHashSet<String> valuation){
-        for (Integer entry: prelimInputMap.keySet()) {
+        //for (Integer entry: prelimInputMap.keySet()) {
 
-            if(exp.equals(prelimInputMap.get(entry))){
+            //if(exp.equals(prelimInputMap.get(entry))){
+            if(prelimInputMap.containsKey(exp)){
+                int entry = prelimInputMap.get(exp);
                 if(prelimOutputMap.containsKey(entry)) {
                     HashMap<String, PLTLExp> map = prelimOutputMap.get(entry);
                     if(map.containsKey(key)){
@@ -189,8 +193,9 @@ public class Translator {
                     return post;
                 }
             }
-        }
-        prelimInputMap.put(prelimEntries, exp);
+        //}
+        //prelimInputMap.put(prelimEntries, exp);
+        prelimInputMap.put(exp,prelimEntries);
         PLTLExp post = exp.accept(new LocalAfter(), valuation);
         if(!(post instanceof True) && !(post instanceof False))
             post.obligation = exp.obligation;
