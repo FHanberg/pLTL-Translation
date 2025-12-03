@@ -2,18 +2,107 @@ import PLTL.*;
 import PLTL.Future.*;
 import PLTL.Past.*;
 
-import java.util.ArrayDeque;
+import java.util.*;
 import java.util.LinkedHashSet;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
 
 public class MainLoop {
 
+    public static ArrayList<String> splitProcess(PLTLExp input, boolean optimize){
+        ArrayList<String> result = new ArrayList<>();
 
-    public static String Process(PLTLExp input, boolean optimize){
+        if(input instanceof And){
+            PLTLExp converted = input.accept(new NNFConverter());
+            LinkedList<String> atoms = atomRepeat(atomList(converted));
+            Translator t = new Translator();
+            t.setup(new NBAState(converted, 0), atoms);
+            ArrayList<PLTLExp> list = And.getAllAndProps((And)converted);
+            for (PLTLExp exp: list) {
+                //Initialization
+                int stateLabel = 0;
+
+                //Primary state output
+                LinkedList<NBAState> mainSet = new LinkedList<>();
+                //Primary transition output
+                LinkedList<NBATransition> transitionSet = new LinkedList<>();
+                //marks current states to be translated
+                ArrayDeque<NBAState> toBeChecked = new ArrayDeque<>();
+
+                //Create initial state
+                NBAState firstState = new NBAState(exp, stateLabel);
+                stateLabel += 1;
+                mainSet.add(firstState);
+                toBeChecked.addLast(firstState);
+
+                //Main loop of full translation
+                while (!toBeChecked.isEmpty()) {
+                    NBAState node = toBeChecked.pop();
+                    int curLabel = node.m_label;
+                    //Perform a step in the main NBA-to-Büchi translation
+                    LinkedList<TranslationOutput> prospective = t.translationStep(node, atoms, optimize);
+                    //For each primary implicant:
+                    for (TranslationOutput out: prospective) {
+                        NBAState next = new NBAState(out.getTo());
+                        //Determine if the main set already has an equal state, and return its label
+                        int equalLabel = getLabelOfEqual(out.getTo(), mainSet);
+                        //If the state is wholly new, label and add it to both the main set and
+                        // the list of upcoming states to check
+                        if(equalLabel == -1){
+                            next.setLabel(stateLabel);
+                            toBeChecked.addLast(next);
+                            mainSet.add(next);
+
+                            //Labels are added if their corresponding U/M are NOT present
+                            LinkedHashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
+                            LinkedHashSet<Integer> transLabels = new LinkedHashSet<>();
+                            if(!(next.m_exp instanceof False)) {
+                                for (int i = 0; i < t.getTransitionLabels(); i++) {
+                                    if (!antiLabels.contains(i)) {
+                                        transLabels.add(i);
+                                    }
+                                }
+                                transLabels.addAll(out.getObs());
+                            }
+                            transitionSet.add(new NBATransition(curLabel, stateLabel, transLabels, out.getVals()));
+                            stateLabel += 1;
+
+                            //If the state has been created before, add a new transition if necessary
+                        }else{
+                            if(!transitionRepeat(new NBATransition(curLabel, equalLabel, new LinkedHashSet<>()), transitionSet, out.getVals())){
+                                //Labels are added if their corresponding U/M are NOT present
+                                LinkedHashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
+                                LinkedHashSet<Integer> transLabels = new LinkedHashSet<>();
+                                if(!(next.m_exp instanceof False)) {
+                                    for (int i = 0; i < t.getTransitionLabels(); i++) {
+                                        if (!antiLabels.contains(i)) {
+                                            transLabels.add(i);
+                                        }
+                                    }
+                                    transLabels.addAll(out.getObs());
+                                }
+                                transitionSet.add(new NBATransition(curLabel, equalLabel, transLabels, out.getVals()));
+
+                            }
+
+                        }
+                    }
+                }
+                transitionSet.sort(NBATransition.comp);
+
+
+                //Write information about the set to the console
+                result.add(Output.readout("multi", mainSet, transitionSet, atoms, t.getTransitionLabels()));
+            }
+        }else{
+            result.add(Process(input,"oops", optimize));
+        }
+
+        return result;
+    }
+
+
+    public static String Process(PLTLExp input,String str, boolean optimize){
         //Initialization
         int stateLabel = 0;
-
 
         PLTLExp newTest = input.accept(new NNFConverter());
 
@@ -33,7 +122,6 @@ public class MainLoop {
         mainSet.add(firstState);
         toBeChecked.addLast(firstState);
 
-        //Translator needs to be non-static or return the tuple (states + next U/M label)
         Translator t = new Translator();
         boolean first = true;
         //Main loop of full translation
@@ -100,7 +188,7 @@ public class MainLoop {
 
 
         //Write information about the set to the console
-        return Output.readout(mainSet, transitionSet, atoms, t.getTransitionLabels());
+        return Output.readout(str, mainSet, transitionSet, atoms, t.getTransitionLabels());
     }
 
     /*

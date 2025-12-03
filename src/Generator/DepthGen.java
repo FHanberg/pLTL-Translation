@@ -11,48 +11,31 @@ import static Generator.GenCodes.*;
 public class DepthGen {
     private int m_remainingLen;
 
-    private int m_remainingDepth;
-
-    private int m_requestedDepth;
-
-    private int m_greatestDepth;
-
     private int m_maxVar;
 
     private int m_curVar;
 
     private int m_prob; //0 - 100 span
 
-    private boolean past;
-
     public DepthGen(){
         m_remainingLen = -1;
-        m_remainingDepth = 0;
         m_maxVar = 0;
         m_curVar = 0;
         m_prob = 50;
 
     }
 
-    public String Generate(int depth, int variables){
-        m_remainingLen = -1;
-        m_remainingDepth = depth;
-        m_maxVar = variables;
-
-        GenStructure init = InitGen();
-        GenStructure result = InteriorGenerate(init);
-        return Convert(result);
-    }
-
     public String Generate(int depth, int variables, int length, int prob){
         m_remainingLen = length;
-        m_requestedDepth = depth;
-        m_greatestDepth = 0;
+        int m_greatestDepth = 0;
         m_maxVar = variables;
         m_curVar = 0;
         m_prob = prob;
 
         GenStructure top = InitGen();
+        while(top instanceof GenUnary){
+            top = InitGen();
+        }
 
         ArrayDeque<GenStructure> queue = new ArrayDeque<>();
         queue.addLast(top);
@@ -73,7 +56,7 @@ public class DepthGen {
             if(m_remainingLen <= 0){
                 rollTerminal = true;
             }
-            else if(current.localDepth == m_requestedDepth){
+            else if(current.localDepth == depth){
                 if(current.inPast == 0){
                     rollFuture = true;
                 }else{
@@ -81,7 +64,7 @@ public class DepthGen {
                 }
                 rollLogic = true;
             }
-            else if(m_remainingLen <= m_requestedDepth - m_greatestDepth){
+            else if(m_remainingLen <= depth - m_greatestDepth){
                 if(current.localDepth != m_greatestDepth){
                     if(current instanceof GenUnary u){
                         u.setTarget(TerminalGen());
@@ -92,11 +75,15 @@ public class DepthGen {
                     }
                     continue;
                 }
+                if(current.inPast == 1){
+                    rollFuture = true;
+                }else{
+                    rollPast = true;
+                }
 
                 depthCrunch = true;
                 swap = true;
-            }
-            else{
+            } else{
                 if(current.inPast != -1) {
                     int rand = Random(1, 100);
                     if (rand <= m_prob) {
@@ -157,13 +144,12 @@ public class DepthGen {
                     }
                 }
                 if(!(left instanceof GenTerminal)){
-                    m_remainingLen -= 1;
                     queue.addLast(left);
                 }
                 if(!(right instanceof GenTerminal)){
-                    m_remainingLen -= 1;
                     queue.addLast(right);
                 }
+                m_remainingLen -= 1;
             }
             if(current instanceof GenUnary u){
                 GenStructure target = GenFull(rollLogic,rollTerminal,rollPast,rollFuture);
@@ -214,6 +200,7 @@ public class DepthGen {
         if(future)
             max += 7;
         int rand = Random(1,max);
+        rand -= 1;
         if(logic){
             if(rand <= 4) {
                 return LogicGen();
@@ -239,14 +226,12 @@ public class DepthGen {
     }
 
     private GenStructure InitGen(){
-        past = false;
-        m_remainingDepth -=1;
         if(m_remainingLen <= 0){
-            return PastGen();
+            return TerminalGen();
         }
 
         GenStructure result;
-        int rand = Random(1,19);
+        int rand = Random(1,15);
         if(rand <= 8){
             result = PastGen();
             result.inPast = 1;
@@ -262,42 +247,6 @@ public class DepthGen {
         m_remainingLen -= 1;
 
         return result;
-    }
-
-    private GenStructure InteriorGenerate(GenStructure current){
-        if(m_remainingLen <= 0){
-            if(m_remainingDepth <= 0){
-                if(current instanceof GenTerminal){
-                    return current;
-                }else if(current instanceof GenUnary){
-                    ((GenUnary) current).setTarget(TerminalGen());
-                    return current;
-                }else if(current instanceof GenBinary){
-                    ((GenBinary) current).setLeft(TerminalGen());
-                    ((GenBinary) current).setRight(TerminalGen());
-                    return current;
-                }
-            }
-            m_remainingDepth -=1;
-            GenStructure next;
-            if(past){
-                next = PastGen();
-            }else{
-                next = FutureGen();
-            }
-            past = !past;
-            if(current instanceof GenUnary){
-                ((GenUnary) current).setTarget(next);
-
-            }else if(current instanceof GenBinary){
-                ((GenBinary) current).setLeft(next);
-                ((GenBinary) current).setRight(TerminalGen());
-            }
-            InteriorGenerate(next);
-            return current;
-        }
-
-        return null;
     }
 
     private int Random(int min, int max){
@@ -335,23 +284,12 @@ public class DepthGen {
     }
 
     private GenStructure TerminalGen(){
-        int rand = Random(2, 4);
-        switch (rand) {
-            case 0 -> {
-                return new GenTerminal(FALSE);
-            }
-            case 1 -> {
-                return new GenTerminal(GenCodes.TRUE);
-            }
-            default -> {
-                GenTerminal term = new GenTerminal(GenCodes.TERM);
-                term.term = getChar(m_curVar);
-                m_curVar += 1;
-                if (m_curVar >= m_maxVar)
-                    m_curVar = 0;
-                return term;
-            }
-        }
+        GenTerminal term = new GenTerminal(GenCodes.TERM);
+        term.term = getChar(m_curVar);
+        m_curVar += 1;
+        if (m_curVar >= m_maxVar)
+            m_curVar = 0;
+        return term;
     }
 
     private GenStructure LogicGen(){
@@ -366,13 +304,16 @@ public class DepthGen {
 
     private String Convert(GenStructure s){
         if(s instanceof GenTerminal){
-            switch (s.getType()){
-                case FALSE:
+            switch (s.getType()) {
+                case FALSE -> {
                     return "false";
-                case TRUE:
+                }
+                case TRUE -> {
                     return "true";
-                case TERM:
+                }
+                case TERM -> {
                     return "" + ((GenTerminal) s).term;
+                }
             }
         }else if(s instanceof GenUnary){
             String target = Convert(((GenUnary) s).getTarget());

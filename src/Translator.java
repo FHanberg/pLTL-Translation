@@ -13,6 +13,9 @@ public class Translator {
 
     LinkedList<PLTLExp> canBeWeakened;
     HashMap<Integer, HashMap<String, HashMap<LinkedHashSet<Integer>, PLTLExp>>> WCPrelims;
+
+    HashMap<Integer, PLTLExp> WCMap;
+    HashMap<Integer, PLTLExp> WCPostVal;
     HashMap<PLTLExp, LinkedHashSet<PLTLExp>> ImplicantMap;
     HashMap<Integer, Boolean> currentlyWeak;
 
@@ -40,6 +43,8 @@ public class Translator {
         allVals = new LinkedHashSet<>();
         allWC = new LinkedHashSet<>();
         ImplicantMap = new HashMap<>();
+        WCMap = new HashMap<>();
+        WCPostVal = new HashMap<>();
     }
 
     public void setup(NBAState base, LinkedList<String> atomList){
@@ -49,7 +54,7 @@ public class Translator {
         allWC = getAllSubsets(pastLabels, 0, new LinkedHashSet<>());
         setWC(base.getExp());
         currentlyWeak = new HashMap<>();
-        currentWeak(base.getExp());
+        //currentWeak(base.getExp());
     }
 
     public int getTransitionLabels(){
@@ -60,6 +65,7 @@ public class Translator {
         opt = optimize;
         oldObligations = obligationFinder(base.getExp());
         LinkedList<TranslationOutput> result = new LinkedList<>();
+
         currentWeak(base.getExp());
         LinkedHashSet<Integer> currentWeakSubs = new LinkedHashSet<>();
         for (Integer i: currentlyWeak.keySet()) {
@@ -94,14 +100,17 @@ public class Translator {
             }
             if(earlyEnd)
                 continue;
-
+            WCPostVal = new HashMap<>();
+            for(Integer n : WCMap.keySet()){
+                WCPostVal.put(n, translationActual(WCMap.get(n), valuation));
+            }
             for (LinkedHashSet<Integer> C : allWC) {
                 toWeaken = C;
                 boolean valid = true;
                 PLTLExp wcActual = new True();
                 if (optimize && !C.isEmpty()) {
                     for (Integer num : C) {
-                        PLTLExp add = WCPrelims.get(num).get(key).get(currentWeakSubs);
+                        PLTLExp add = WCPostVal.get(num).accept(new PostUpdateHandler(), valuation);
                         if (add instanceof False) {
                             valid = false;
                             break;
@@ -111,7 +120,6 @@ public class Translator {
                     }
                 }
                 if(!valid){
-                    //addResult(result, new False(), valuation);
                     continue;
                 }
                 LinkedList<PLTLExp> list = new LinkedList<>();
@@ -365,6 +373,7 @@ public class Translator {
 
     void setupLabels(PLTLExp exp){
 
+
         if(exp instanceof Unary){
             if(exp instanceof Yesterday || exp instanceof WYesterday){
                 pastLabeling(exp);
@@ -419,19 +428,19 @@ public class Translator {
     void setWC(PLTLExp exp){
         if(exp instanceof Unary){
             if(exp instanceof Yesterday || exp instanceof WYesterday){
-                setupWC(exp.pastLabel,((Unary)exp).getTarget(),((Unary)exp).getTarget());
+                WCMap.put(exp.pastLabel, ((Unary)exp).getTarget());
             }
             setWC(((Unary) exp).getTarget());
         }else if(exp instanceof Binary){
-                if (exp instanceof Since) {
-                    setupWC(exp.pastLabel, (new Or(((Since) exp).getLeft(),((Since) exp).getRight())), ((Since)exp).getRight());
-                } else if (exp instanceof WSince) {
-                    setupWC(exp.pastLabel, (new Or(((WSince) exp).getLeft(),((WSince) exp).getRight())), ((WSince)exp).getRight());
-                } else if (exp instanceof Before) {
-                    setupWC(exp.pastLabel, ((Before) exp).getRight(), (new And(((Before) exp).getLeft(),((Before) exp).getRight())));
-                } else if (exp instanceof WBefore) {
-                    setupWC(exp.pastLabel, ((WBefore) exp).getRight(), (new And(((WBefore) exp).getLeft(),((WBefore) exp).getRight())));
-                }
+            if (exp instanceof Since) {
+                WCMap.put(exp.pastLabel, ((Since)exp).getRight());
+            } else if (exp instanceof WSince) {
+                WCMap.put(exp.pastLabel, (new Or(((WSince) exp).getLeft(),((WSince) exp).getRight())));
+            } else if (exp instanceof Before) {
+                WCMap.put(exp.pastLabel, (new And(((Before) exp).getLeft(),((Before) exp).getRight())));
+            } else if (exp instanceof WBefore) {
+                WCMap.put(exp.pastLabel, ((WBefore) exp).getRight());
+            }
             setWC(((Binary)exp).getLeft());
             setWC(((Binary)exp).getRight());
         }

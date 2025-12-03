@@ -8,9 +8,10 @@ import java.util.LinkedList;
     */
 public class Output {
 
-    static public String readout(LinkedList<NBAState> states, LinkedList<NBATransition> trans, LinkedList<String> atoms, int tLabels){
+    static public String readout(String name, LinkedList<NBAState> states, LinkedList<NBATransition> trans, LinkedList<String> atoms, int tLabels){
         StringBuilder result = new StringBuilder();
         result.append("HOA: v1\n");
+        result.append("name: ").append(name).append("\n");
         result.append("States: ").append(states.size()).append("\n");
         result.append("Start: 0\n");
         result.append("acc-name: Buchi\n");
