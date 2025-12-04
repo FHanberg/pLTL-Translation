@@ -148,6 +148,7 @@ public class DepthGen {
                 }
                 if(!(right instanceof GenTerminal)){
                     queue.addLast(right);
+                    m_remainingLen -= 1;
                 }
                 m_remainingLen -= 1;
             }
@@ -243,7 +244,6 @@ public class DepthGen {
             result.inPast = -1;
         }
         result.localDepth = 0;
-
         m_remainingLen -= 1;
 
         return result;
