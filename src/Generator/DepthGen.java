@@ -193,20 +193,20 @@ public class DepthGen {
     private GenStructure GenFull(boolean logic, boolean terminal, boolean past, boolean future){
         int max = 1;
         if(logic)
-            max += 4;
+            max += 3;
         if(terminal)
             max += 3;
         if(past)
-            max += 8;
+            max += 6;
         if(future)
             max += 7;
         int rand = Random(1,max);
         rand -= 1;
         if(logic){
-            if(rand <= 4) {
+            if(rand <= 3) {
                 return LogicGen();
             }else{
-                rand -= 4;
+                rand -= 3;
             }
         }
         if(terminal){
@@ -217,7 +217,7 @@ public class DepthGen {
             }
         }
         if(past){
-            if(rand <= 8)
+            if(rand <= 6)
                 return PastGen();
         }
         if(future){
@@ -293,7 +293,7 @@ public class DepthGen {
     }
 
     private GenStructure LogicGen(){
-        int rand = Random(0,3);
+        int rand = Random(1,3);
         return switch (rand){
             case 0 -> new GenUnary(NOT);
             case 1 -> new GenBinary(IMPLIES);

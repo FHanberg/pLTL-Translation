@@ -55,7 +55,7 @@ public class Testing {
                 try{
                     System.out.println("Props: " + i + ", Alternations: " + j);
                     DepthGen gen = new DepthGen();
-                    String orig = gen.Generate(j, i, 20, 50);
+                    String orig = gen.Generate(j, i, 30, 50);
                     InputStream input  = new ByteArrayInputStream(orig.getBytes(StandardCharsets.UTF_8));
                     BufferedInputStream in = new BufferedInputStream(input);
                     Parser.pltlGrammarLexer lexer = new pltlGrammarLexer(CharStreams.fromStream(in));
