@@ -8,10 +8,9 @@ import java.util.LinkedList;
     */
 public class Output {
 
-    static public String readout(String name, LinkedList<NBAState> states, LinkedList<NBATransition> trans, LinkedList<String> atoms, int tLabels){
+    static public String readout(String name, LinkedList<NBAState> states, HashMap<Integer,HashMap<String, LinkedList<NBATransition>>> trans, LinkedList<String> atoms, int tLabels){
         StringBuilder result = new StringBuilder();
         result.append("HOA: v1\n");
-        result.append("name: ").append(name).append("\n");
         result.append("States: ").append(states.size()).append("\n");
         result.append("Start: 0\n");
         result.append("acc-name: Buchi\n");
@@ -30,18 +29,33 @@ public class Output {
         result.append("--BODY--\n");
         for(NBAState state : states){
             result.append("State: ").append(state.getLabel()).append(" \n");
-            result.append(transitionReadout(state.m_label, trans, atoms));
+            result.append(transitionReadout(state.m_label,states.size(), trans, atoms));
         }
         result.append("--END--");
         return result.toString();
     }
 
-    static private String transitionReadout(int state, LinkedList<NBATransition> trans, LinkedList<String> atoms){
+    static private String transitionReadout(int state, int statecount, HashMap<Integer,HashMap<String,LinkedList<NBATransition>>> trans, LinkedList<String> atoms){
         StringBuilder result = new StringBuilder();
-        LinkedList<NBATransition> relevant = getStateTransitions(state, trans);
+        HashMap<String, LinkedList<NBATransition>> transitions = trans.get(state);
         HashMap<HashSet<String>, LinkedList<Integer>> transitionMap = new HashMap<>();
         HashMap<HashSet<String>, LinkedList<Integer>> labelMap = new HashMap<>();
-        for (NBATransition t: relevant) {
+        LinkedList<ReadoutTransition> relevant = new LinkedList<>();
+        for(int i = 0; i < statecount ; i++){
+            ReadoutTransition readout = new ReadoutTransition(state, i);
+            for (LinkedList<NBATransition> list: transitions.values()) {
+                for (NBATransition t: list) {
+                    if(t.m_to == i){
+                        readout.m_labels.addAll(t.m_labels);
+                        readout.m_valuations.add(t.m_valuation);
+                    }
+                }
+            }
+            if(!readout.m_valuations.isEmpty())
+                relevant.add(readout);
+        }
+        for (ReadoutTransition t: relevant) {
+
             HashSet<HashSet<String>> actual = transitionTrim(t.m_valuations, atoms);
             for(HashSet<String> valuation : actual){
                 if(!transitionMap.containsKey(valuation)){
@@ -145,4 +159,21 @@ public class Output {
         }
         return result;
     }
+
+    static public LinkedHashSet<LinkedHashSet<String>> getAllValuations(LinkedList<String> atoms, int index, LinkedHashSet<String> current){
+        LinkedHashSet<LinkedHashSet<String>> result = new LinkedHashSet<>();
+        if(index != atoms.size()){
+            LinkedHashSet<String> add = new LinkedHashSet<>(current);
+            add.add(atoms.get(index));
+            result.addAll(getAllValuations(atoms, index + 1, add));
+            LinkedHashSet<String> stay = new LinkedHashSet<>(current);
+            result.addAll(getAllValuations(atoms, index + 1, stay));
+        }
+        result.add(current);
+        return result;
+    }
+
+
 }
+
+

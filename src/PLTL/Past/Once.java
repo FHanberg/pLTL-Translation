@@ -9,6 +9,11 @@ public class Once extends Unary {
     }
 
     @Override
+    public String getOp() {
+        return "O";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

@@ -7,8 +7,8 @@ import java.util.LinkedHashSet;
 
 public class MainLoop {
 
-    public static ArrayList<String> splitProcess(PLTLExp input, boolean optimize){
-        ArrayList<String> result = new ArrayList<>();
+    public static ArrayList<NBAAutomata> splitProcess(PLTLExp input, boolean optimize){
+        ArrayList<NBAAutomata> result = new ArrayList<>();
 
         if(input instanceof And){
             PLTLExp converted = input.accept(new NNFConverter());
@@ -17,18 +17,21 @@ public class MainLoop {
             t.setup(new NBAState(converted, 0), atoms);
             ArrayList<PLTLExp> list = And.getAllAndProps((And)converted);
             for (PLTLExp exp: list) {
+                t.reset();
+                System.out.println("evaluating: " + exp.getString());
                 //Initialization
                 int stateLabel = 0;
 
                 //Primary state output
                 LinkedList<NBAState> mainSet = new LinkedList<>();
                 //Primary transition output
-                LinkedList<NBATransition> transitionSet = new LinkedList<>();
+                HashMap<Integer, HashMap<String,LinkedList<NBATransition>>> transitionSet = new HashMap<>();
                 //marks current states to be translated
                 ArrayDeque<NBAState> toBeChecked = new ArrayDeque<>();
 
                 //Create initial state
                 NBAState firstState = new NBAState(exp, stateLabel);
+                transitionSet.put(stateLabel, new HashMap<>());
                 stateLabel += 1;
                 mainSet.add(firstState);
                 toBeChecked.addLast(firstState);
@@ -62,12 +65,14 @@ public class MainLoop {
                                 }
                                 transLabels.addAll(out.getObs());
                             }
-                            transitionSet.add(new NBATransition(curLabel, stateLabel, transLabels, out.getVals()));
+                            transitionSet.put(stateLabel, new HashMap<>());
+                            transitionSet.get(curLabel).put(out.getKey(), new LinkedList<>());
+                            transitionSet.get(curLabel).get(out.getKey()).add(new NBATransition(curLabel, stateLabel, transLabels, out.getVal()));
                             stateLabel += 1;
 
                             //If the state has been created before, add a new transition if necessary
                         }else{
-                            if(!transitionRepeat(new NBATransition(curLabel, equalLabel, new LinkedHashSet<>()), transitionSet, out.getVals())){
+                            if(!transitionRepeat(new NBATransition(curLabel, equalLabel, new LinkedHashSet<>()), transitionSet.get(curLabel), out.getKey(), out.getObs())){
                                 //Labels are added if their corresponding U/M are NOT present
                                 LinkedHashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
                                 LinkedHashSet<Integer> transLabels = new LinkedHashSet<>();
@@ -79,18 +84,24 @@ public class MainLoop {
                                     }
                                     transLabels.addAll(out.getObs());
                                 }
-                                transitionSet.add(new NBATransition(curLabel, equalLabel, transLabels, out.getVals()));
+                                if(!transitionSet.get(curLabel).containsKey(out.getKey()))
+                                    transitionSet.get(curLabel).put(out.getKey(), new LinkedList<>());
+                                transitionSet.get(curLabel).get(out.getKey()).add(new NBATransition(curLabel, equalLabel, transLabels, out.getVal()));
 
                             }
 
                         }
                     }
                 }
-                transitionSet.sort(NBATransition.comp);
+                for (HashMap<String, LinkedList<NBATransition>> map: transitionSet.values()) {
+                    for (LinkedList<NBATransition> tr: map.values()) {
+                        tr.sort(NBATransition.comp);
+                    }
+                }
 
 
                 //Write information about the set to the console
-                result.add(Output.readout("multi", mainSet, transitionSet, atoms, t.getTransitionLabels()));
+                result.add(new NBAAutomata(mainSet, transitionSet, atoms, t.getTransitionLabels()));
             }
         }else{
             result.add(Process(input,"oops", optimize));
@@ -100,7 +111,7 @@ public class MainLoop {
     }
 
 
-    public static String Process(PLTLExp input,String str, boolean optimize){
+    public static NBAAutomata Process(PLTLExp input,String str, boolean optimize){
         //Initialization
         int stateLabel = 0;
 
@@ -111,12 +122,14 @@ public class MainLoop {
         //Primary state output
         LinkedList<NBAState> mainSet = new LinkedList<>();
         //Primary transition output
-        LinkedList<NBATransition> transitionSet = new LinkedList<>();
+        HashMap<Integer, HashMap<String, LinkedList<NBATransition>>> transitionSet = new HashMap<>();
+        //LinkedList<NBATransition> transitionSet = new LinkedList<>();
         //marks current states to be translated
         ArrayDeque<NBAState> toBeChecked = new ArrayDeque<>();
 
         //Create initial state
         NBAState firstState = new NBAState(newTest, stateLabel);
+        transitionSet.put(stateLabel, new HashMap<>());
 
         stateLabel += 1;
         mainSet.add(firstState);
@@ -128,6 +141,7 @@ public class MainLoop {
             while (!toBeChecked.isEmpty()) {
                 System.out.println("Current Set size: " + toBeChecked.size());
                 NBAState node = toBeChecked.pop();
+                System.out.println("Current node: " + node.getExp().getString());
                 int curLabel = node.m_label;
                 if(first){
                     first = false;
@@ -135,7 +149,6 @@ public class MainLoop {
                 }
                 //Perform a step in the main NBA-to-Büchi translation
                 LinkedList<TranslationOutput> prospective = t.translationStep(node, atoms, optimize);
-                System.out.println("Prospective Size: " + prospective.size());
                 //For each primary implicant:
                 for (TranslationOutput out: prospective) {
                     NBAState next = new NBAState(out.getTo());
@@ -159,12 +172,14 @@ public class MainLoop {
                             }
                             transLabels.addAll(out.getObs());
                         }
-                        transitionSet.add(new NBATransition(curLabel, stateLabel, transLabels, out.getVals()));
+                        transitionSet.put(stateLabel, new HashMap<>());
+                        transitionSet.get(curLabel).put(out.getKey(), new LinkedList<>());
+                        transitionSet.get(curLabel).get(out.getKey()).add(new NBATransition(curLabel, stateLabel, transLabels, out.getVal()));
                         stateLabel += 1;
 
                         //If the state has been created before, add a new transition if necessary
                     }else{
-                            if(!transitionRepeat(new NBATransition(curLabel, equalLabel, new LinkedHashSet<>()), transitionSet, out.getVals())){
+                            if(!transitionRepeat(new NBATransition(curLabel, equalLabel, new LinkedHashSet<>()), transitionSet.get(curLabel), out.getKey(), out.getObs())){
                                 //Labels are added if their corresponding U/M are NOT present
                                 LinkedHashSet<Integer> antiLabels = next.m_exp.accept(new transitionLabel());
                                 LinkedHashSet<Integer> transLabels = new LinkedHashSet<>();
@@ -176,19 +191,23 @@ public class MainLoop {
                                     }
                                     transLabels.addAll(out.getObs());
                                 }
-                                transitionSet.add(new NBATransition(curLabel, equalLabel, transLabels, out.getVals()));
+                                if(!transitionSet.get(curLabel).containsKey(out.getKey()))
+                                    transitionSet.get(curLabel).put(out.getKey(), new LinkedList<>());
+                                transitionSet.get(curLabel).get(out.getKey()).add(new NBATransition(curLabel, equalLabel, transLabels, out.getVal()));
 
                             }
 
                     }
                 }
-                System.out.println("step done");
             }
-        transitionSet.sort(NBATransition.comp);
+        for (HashMap<String, LinkedList<NBATransition>> map: transitionSet.values()) {
+            for (LinkedList<NBATransition> tr: map.values()) {
+                tr.sort(NBATransition.comp);
+            }
+        }
 
 
-        //Write information about the set to the console
-        return Output.readout(str, mainSet, transitionSet, atoms, t.getTransitionLabels());
+        return new NBAAutomata(mainSet, transitionSet, atoms, t.getTransitionLabels());
     }
 
     /*
@@ -343,13 +362,13 @@ public class MainLoop {
     /*
     Check if a transition already exists in a given set.
      */
-    static public boolean transitionRepeat(NBATransition target, LinkedList<NBATransition> set, LinkedHashSet<LinkedHashSet<String>> valuations){
-        for(NBATransition t : set){
-            if(t.equals(target)) {
-                for (LinkedHashSet<String> s: valuations) {
-                    t.addValuation(s);
+    static public boolean transitionRepeat(NBATransition target, HashMap<String, LinkedList<NBATransition>> set, String key, LinkedHashSet<Integer> labels){
+        if(set.containsKey(key)) {
+            for (NBATransition t : set.get(key)) {
+                if (t.equals(target)) {
+                    t.m_labels.addAll(labels);
+                    return true;
                 }
-                return true;
             }
         }
         return false;
@@ -394,8 +413,9 @@ public class MainLoop {
      */
     static public int getLabelOfEqual(PLTLExp target, LinkedList<NBAState> set){
         for(NBAState node : set){
-            if(target.equals(node.m_exp))
+            if(target.equals(node.m_exp)) {
                 return node.getLabel();
+            }
         }
         return -1;
     }

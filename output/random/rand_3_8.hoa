@@ -1,0 +1,22 @@
+HOA: v1
+name:  "(  (  ( a -> b )  M  ( c R a )  )  U  (  (  (  (  (  (  (  ( G ( b )  S a )  U c )  ~S b )  U a )  ~S c )  U b )  B b )  R  ( c S a )  )  ) "
+States: 3
+Start: 0
+acc-name: Buchi
+Acceptance: 5 Inf(0) & Inf(1) & Inf(2) & Inf(3) & Inf(4)
+AP: 3 "a" "b" "c"
+--BODY--
+State: 0 
+  [0&!1&!2] 1 {0 1 2 3 4}
+  [!0&!1&!2] 2
+  [0&1&!2] 1 {0 1 2 3 4}
+  [!0&1&!2] 2
+  [0&!1&2] 1 {0 1 2 3 4}
+  [!0&!1&2] 2
+  [0&1&2] 1 {0 1 2 3 4}
+  [!0&1&2] 2
+State: 1 
+  [t] 1 {0 1 2 3 4}
+State: 2 
+  [t] 2
+--END--

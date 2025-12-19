@@ -5,24 +5,23 @@ public class NBATransition {
     int m_from;
     int m_to;
     LinkedHashSet<Integer> m_labels;
-    LinkedHashSet<LinkedHashSet<String>> m_valuations;
+    LinkedHashSet<String> m_valuation;
 
     public NBATransition(int from, int to, LinkedHashSet<String> valuation){
         m_from = from;
         m_to = to;
         m_labels = new LinkedHashSet<>();
-        m_valuations = new LinkedHashSet<>();
-        m_valuations.add(valuation);
+        m_valuation = valuation;
     }
 
-    public NBATransition(int from, int to, LinkedHashSet<Integer> labels, LinkedHashSet<LinkedHashSet<String>> valuations){
+    public NBATransition(int from, int to, LinkedHashSet<Integer> labels, LinkedHashSet<String> valuations){
         m_from = from;
         m_to = to;
         m_labels = labels;
-        m_valuations = valuations;
+        m_valuation = valuations;
     }
 
-    public void addValuation(LinkedHashSet<String> valuation){
+    /*public void addValuation(LinkedHashSet<String> valuation){
         boolean old = false;
         for (LinkedHashSet<String> v: m_valuations) {
             if (v.equals(valuation)) {
@@ -32,7 +31,7 @@ public class NBATransition {
         }
         if(!old)
             m_valuations.add(valuation);
-    }
+    }*/
 
     @Override
     public boolean equals(Object obj){

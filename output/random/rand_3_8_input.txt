@@ -1,0 +1,1 @@
+ (  (  ( a -> b )  M  ( c R a )  )  U  (  (  (  (  (  (  (  ( G ( b )  S a )  U c )  ~S b )  U a )  ~S c )  U b )  B b )  R  ( c S a )  )  ) 

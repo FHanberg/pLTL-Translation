@@ -21,28 +21,22 @@ public class Testing {
                 System.out.println("arbiterpast " + x);
                 PLTLExp primary = generateArbiter(true, x);
                 if(primary instanceof And){
-                    ArrayList<String> list = MainLoop.splitProcess(primary, true);
+                    ArrayList<NBAAutomata> list = MainLoop.splitProcess(primary, true);
                     for (int y = 0; y < list.size(); y++) {
+                        NBAAutomata result = list.get(y);
                         try (PrintWriter out = new PrintWriter("output/arbiter/past/" + x +"/past" + x + "_" + y + ".hoa")) {
-                            out.println(list.get(y));
+                            out.println(Output.readout("multi" + y,result.getM_states(), result.getM_transitions(), result.getM_atoms(), result.getM_labels()));
                         }
                     }
                 }else {
-                    String result = MainLoop.Process(generateArbiter(true, x),"", true);
+                    NBAAutomata result = MainLoop.Process(generateArbiter(true, x),"", true);
 
                     try (PrintWriter out = new PrintWriter("output/arbiter/past/past" + x + ".hoa")) {
-                        out.println(result);
+                        out.println(Output.readout("pastarbiter" + x,result.getM_states(), result.getM_transitions(), result.getM_atoms(), result.getM_labels()));
                     }
                 }
                 System.out.println("done");
 
-                /*System.out.println("arbiterfuture" + x);
-                String result = MainLoop.Process(generateArbiter(false, x), true);
-
-                try(PrintWriter out = new PrintWriter("output/arbiter/future/future" + x + ".hoa")) {
-                    out.println(result);
-                }
-                System.out.println("done");*/
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -52,26 +46,45 @@ public class Testing {
     public static void RandomTesting(int varmin, int varmax, int altmin, int altmax){
         for (int i = varmin; i <= varmax; i++) {
             for (int j = altmin; j <= altmax; j++) {
-                try{
-                    System.out.println("Props: " + i + ", Alternations: " + j);
-                    DepthGen gen = new DepthGen();
-                    String orig = gen.Generate(j, i, 30, 50);
-                    InputStream input  = new ByteArrayInputStream(orig.getBytes(StandardCharsets.UTF_8));
-                    BufferedInputStream in = new BufferedInputStream(input);
-                    Parser.pltlGrammarLexer lexer = new pltlGrammarLexer(CharStreams.fromStream(in));
-                    TokenStream tokenStream = new CommonTokenStream(lexer);
-                    Parser.pltlGrammarParser parser = new pltlGrammarParser(tokenStream);
+                int attempts = 1;
+                System.out.println("Props: " + i + ", Alternations: " + j);
+                while(true) {
+                    try {
 
-                    pltlGrammarParser.FormulaContext formulaContext = parser.formula();
-                    PLTLExp exp = ContextConverter.Conversion(formulaContext);
+                        DepthGen gen = new DepthGen();
+                        String orig = gen.Generate(j, i, 15, 50);
+                        InputStream input = new ByteArrayInputStream(orig.getBytes(StandardCharsets.UTF_8));
+                        BufferedInputStream in = new BufferedInputStream(input);
+                        Parser.pltlGrammarLexer lexer = new pltlGrammarLexer(CharStreams.fromStream(in));
+                        TokenStream tokenStream = new CommonTokenStream(lexer);
+                        Parser.pltlGrammarParser parser = new pltlGrammarParser(tokenStream);
 
-                    String result = MainLoop.Process(exp, orig,  true);
-                    try (PrintWriter out = new PrintWriter("output/random/rand_" + i + "_" + j + ".hoa")) {
-                        out.println(result);
+                        pltlGrammarParser.FormulaContext formulaContext = parser.formula();
+                        PLTLExp exp = ContextConverter.Conversion(formulaContext);
+
+                        assert exp != null;
+                        long start = System.nanoTime();
+                        NBAAutomata result = MainLoop.Process(exp, orig, true);
+                        long end = System.nanoTime();
+                        if(!result.simpleOutcome()) {
+                            try (PrintWriter out = new PrintWriter("output/random/rand_" + i + "_" + j + ".hoa")) {
+                                out.println(Output.readout(orig, result.getM_states(), result.getM_transitions(), result.getM_atoms(), result.getM_labels()));
+                            }
+                            try (PrintWriter out = new PrintWriter("output/random/rand_" + i + "_" + j + "_info.txt")){
+                                out.println("attempts=" + attempts);
+                                long nanos = end - start;
+                                long millis = nanos / 1000000;
+                                out.println("time_elapsed=" + millis + "ms");
+                            }
+                            System.out.println("done");
+                            break;
+                        }else{
+                            attempts += 1;
+                        }
+                        System.gc();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                    System.out.println("done");
-                }catch (IOException e) {
-                    e.printStackTrace();
                 }
             }
         }
@@ -93,5 +106,11 @@ public class Testing {
         @SuppressWarnings("unused")
         pltlGrammarParser.FormulaContext formulaContext = parser.formula();
         return ContextConverter.Conversion(formulaContext);
+    }
+
+    public static void futureArbiters(int low, int high){
+        for(int i = low; i <= high; i++){
+            System.out.println(ArbiterGen.FutureArbiter(i));
+        }
     }
 }

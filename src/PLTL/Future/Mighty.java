@@ -3,10 +3,15 @@ package PLTL.Future;
 import PLTL.Binary;
 import PLTL.PLTLExp;
 
-//Not actually sure what this operator is shorthand for, honestly
+//Mighty Release
 public class Mighty extends Binary {
     public Mighty(PLTLExp left, PLTLExp right) {
         super(left, right);
+    }
+
+    @Override
+    public String getOp() {
+        return "M";
     }
 
     @Override

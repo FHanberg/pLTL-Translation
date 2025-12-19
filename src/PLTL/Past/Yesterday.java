@@ -9,6 +9,11 @@ public class Yesterday extends Unary {
     }
 
     @Override
+    public String getOp() {
+        return "Y";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

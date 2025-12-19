@@ -9,6 +9,11 @@ public class WBefore extends Binary {
     }
 
     @Override
+    public String getOp() {
+        return "wB";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

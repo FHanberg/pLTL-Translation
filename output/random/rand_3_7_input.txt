@@ -1,0 +1,1 @@
+ (  (  (  ( a | b )  ->  ( c M a )  )  &  ( H (  (  ( F (  (  ( b R c )  S a )  )  S c )  R b )  )  -> a )  )  M  ( F ( b )  M F ( c )  )  ) 

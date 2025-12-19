@@ -9,6 +9,11 @@ public class Since extends Binary {
     }
 
     @Override
+    public String getOp() {
+        return "S";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

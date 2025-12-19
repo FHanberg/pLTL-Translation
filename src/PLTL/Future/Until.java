@@ -9,6 +9,11 @@ public class Until extends Binary {
     }
 
     @Override
+    public String getOp() {
+        return "U";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

@@ -9,6 +9,11 @@ public class WYesterday extends Unary {
     }
 
     @Override
+    public String getOp() {
+        return "wY";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

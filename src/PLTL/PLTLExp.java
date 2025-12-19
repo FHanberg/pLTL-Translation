@@ -89,5 +89,19 @@ public abstract class PLTLExp{
 
         R visit(Not exp, A args);
     }
+    public abstract String getString();
+
+    public boolean hasAndOr(PLTLExp exp){
+        if(exp instanceof Unary)
+            return hasAndOr(((Unary) exp).getTarget());
+        if(exp instanceof Binary){
+            if(exp instanceof And || exp instanceof Or)
+                return true;
+            return (hasAndOr(((Binary)exp).getLeft()) || hasAndOr(((Binary) exp).getRight()));
+        }
+        return false;
+    }
+
+    public abstract boolean dirtyEquals(PLTLExp target);
 
 }

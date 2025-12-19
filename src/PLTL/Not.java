@@ -7,6 +7,11 @@ public class Not extends Unary {
     }
 
     @Override
+    public String getOp() {
+        return "!";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

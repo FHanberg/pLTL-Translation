@@ -1,0 +1,6 @@
+Acceptance:Inf(0) 
+ Number of sets:1 
+ Number of states:11 
+ initial states0 
+ Atomic propositions: b (=5) c (=6) d (=7) e (=8) a (=4) f (=9) 
+ 

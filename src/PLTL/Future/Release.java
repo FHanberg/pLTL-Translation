@@ -9,6 +9,11 @@ public class Release extends Binary {
     }
 
     @Override
+    public String getOp() {
+        return "R";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

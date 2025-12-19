@@ -1,0 +1,1 @@
+ (  ( H (  (  ( c B a )  ~S  ( b S c )  )  )  W H (  (  ( a S b )  &  ( c S a )  )  )  )  S  (  ( F ( a )  R  ( b -> c )  )  R F (  ( a W b )  )  )  ) 

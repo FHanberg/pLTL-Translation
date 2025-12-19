@@ -8,6 +8,11 @@ public class Globally extends PLTL.Unary {
     }
 
     @Override
+    public String getOp() {
+        return "G";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

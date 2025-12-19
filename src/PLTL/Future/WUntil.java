@@ -10,6 +10,11 @@ public class WUntil extends Binary {
     }
 
     @Override
+    public String getOp() {
+        return "W";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

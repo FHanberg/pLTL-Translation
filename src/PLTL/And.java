@@ -10,6 +10,11 @@ public class And extends Binary{
     }
 
     @Override
+    public String getOp() {
+        return "&";
+    }
+
+    @Override
     public <R> R accept(PLTLExp.Visitor<R> v) {
         return v.visit(this);
     }
@@ -33,12 +38,23 @@ public class And extends Binary{
             return false;
         }
         for (PLTLExp a: first) {
+            boolean deeper = hasAndOr(a);
+            String s = a.getString();
             boolean match = false;
             for (PLTLExp b: second) {
-                if(a.equals(b)){
+                boolean deeper2 = hasAndOr(b);
+                if(deeper != deeper2)
+                    return false;
+                if (s.equals(b.getString())) {
                     second.remove(b);
                     match = true;
                     break;
+                } else if (deeper) {
+                    if (a.equals(b)) {
+                        second.remove(b);
+                        match = true;
+                        break;
+                    }
                 }
             }
             if(!match){
@@ -61,5 +77,42 @@ public class And extends Binary{
             results.add(exp.getRight());
         }
         return results;
+    }
+
+    @Override
+    public boolean dirtyEquals(PLTLExp target) {
+        if(target instanceof And){
+            ArrayList<PLTLExp> first = getAllAndProps(this);
+            ArrayList<PLTLExp> second = getAllAndProps((And) target);
+            if(first.size() != second.size()){
+                return false;
+            }
+            for (PLTLExp a: first) {
+                boolean deeper = hasAndOr(a);
+                String s = a.getString();
+                boolean match = false;
+                for (PLTLExp b: second) {
+                    boolean deeper2 = hasAndOr(b);
+                    if(deeper != deeper2)
+                        return false;
+                    if (s.equals(b.getString())) {
+                        second.remove(b);
+                        match = true;
+                        break;
+                    } else if (deeper) {
+                        if (a.dirtyEquals(b)) {
+                            second.remove(b);
+                            match = true;
+                            break;
+                        }
+                    }
+                }
+                if(!match){
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 }

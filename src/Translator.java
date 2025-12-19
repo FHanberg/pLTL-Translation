@@ -15,12 +15,12 @@ public class Translator {
     HashMap<Integer, HashMap<String, HashMap<LinkedHashSet<Integer>, PLTLExp>>> WCPrelims;
 
     HashMap<Integer, PLTLExp> WCMap;
-    HashMap<Integer, PLTLExp> WCPostVal;
-    HashMap<PLTLExp, LinkedHashSet<PLTLExp>> ImplicantMap;
-    HashMap<Integer, Boolean> currentlyWeak;
+    HashMap<Integer, HashMap<String, PLTLExp>> WCPostVal;
+    HashMap<String, LinkedHashSet<PLTLExp>> ImplicantMap;
+    //HashMap<Integer, Boolean> currentlyWeak;
 
-    //HashMap<PLTLExp, Integer> prelimInputMap;
-    HashMap<Integer, PLTLExp> prelimInputMap;
+    HashMap<String, Integer> prelimInputMap;
+    //HashMap<Integer, PLTLExp> prelimInputMap;
     HashMap<Integer, HashMap<String, PLTLExp>> prelimOutputMap;
     LinkedHashSet<LinkedHashSet<String>> allVals;
     LinkedHashSet<LinkedHashSet<Integer>> allWC;
@@ -49,13 +49,35 @@ public class Translator {
     }
 
     public void setup(NBAState base, LinkedList<String> atomList){
+
         canBeWeakened = new LinkedList<>();
         allVals = getAllValuations(atomList, 0, new LinkedHashSet<>());
         setupLabels(base.getExp());
         allWC = getAllSubsets(pastLabels, 0, new LinkedHashSet<>());
         setWC(base.getExp());
-        currentlyWeak = new HashMap<>();
+        //currentlyWeak = new HashMap<>();
         //currentWeak(base.getExp());
+        WCPostVal = new HashMap<>();
+        newObligations = new LinkedHashSet<>();
+        for (LinkedHashSet<String> valuation: allVals) {
+            StringBuilder b = new StringBuilder();
+            for (String s: valuation) {
+                b.append(s);
+            }
+            String key = b.toString();
+            for(Integer n : WCMap.keySet()){
+                if(!WCPostVal.containsKey(n))
+                    WCPostVal.put(n, new HashMap<>());
+                WCPostVal.get(n).put(key, translationActual(WCMap.get(n), valuation));
+            }
+        }
+
+    }
+
+    public void reset(){
+        prelimEntries = 0;
+        prelimInputMap = new HashMap<>();
+        prelimOutputMap = new HashMap<>();
     }
 
     public int getTransitionLabels(){
@@ -67,12 +89,12 @@ public class Translator {
         oldObligations = obligationFinder(base.getExp());
         LinkedList<TranslationOutput> result = new LinkedList<>();
 
-        currentWeak(base.getExp());
-        LinkedHashSet<Integer> currentWeakSubs = new LinkedHashSet<>();
+        //currentWeak(base.getExp());
+        /*LinkedHashSet<Integer> currentWeakSubs = new LinkedHashSet<>();
         for (Integer i: currentlyWeak.keySet()) {
             if(currentlyWeak.get(i))
                 currentWeakSubs.add(i);
-        }
+        }*/
         LinkedList<PLTLExp> topLevel = topLevelConjunction(base.getExp());
 
 
@@ -87,12 +109,12 @@ public class Translator {
             boolean earlyEnd = false;
             for (PLTLExp topExp: topLevel) {
                 if(prelimInputMap.isEmpty()){
-                    prelimInputMap.put(prelimEntries, topExp);
-                    //prelimInputMap.put(topExp, prelimEntries);
+                    //prelimInputMap.put(prelimEntries, topExp);
+                    prelimInputMap.put(topExp.getString(), prelimEntries);
                     prelimEntries += 1;
                 }
                 PLTLExp post = translationActual(topExp, valuation);
-                if(post instanceof True || post instanceof False){
+                if(post instanceof False){
                     addResult(result, post, valuation);
                     earlyEnd = true;
                     break;
@@ -102,17 +124,14 @@ public class Translator {
             }
             if(earlyEnd)
                 continue;
-            WCPostVal = new HashMap<>();
-            for(Integer n : WCMap.keySet()){
-                WCPostVal.put(n, translationActual(WCMap.get(n), valuation));
-            }
+
             for (LinkedHashSet<Integer> C : allWC) {
                 toWeaken = C;
                 boolean valid = true;
                 PLTLExp wcActual = new True();
                 if (optimize && !C.isEmpty()) {
                     for (Integer num : C) {
-                        PLTLExp add = WCPostVal.get(num).accept(new PostUpdateHandler(), valuation);
+                        PLTLExp add = WCPostVal.get(num).get(key).accept(new PostUpdateHandler(), valuation);
                         if (add instanceof False) {
                             valid = false;
                             break;
@@ -135,18 +154,22 @@ public class Translator {
                 }
                 PLTLExp partTrim = trueFalseTrim(current);
                 PLTLExp fullTrim = andTrim(partTrim);
+                String trimstr = fullTrim.getString();
                 LinkedHashSet<PLTLExp> implicants;
-                if(!ImplicantMap.containsKey(fullTrim)) {
+                if(!ImplicantMap.containsKey(trimstr)) {
                     PLTLExp rewritten = fullTrim.accept(new DNF());
                     implicants = primeImplicants(rewritten);
                     LinkedHashSet<PLTLExp> trimmed = new LinkedHashSet<>();
                     for (PLTLExp exp: implicants) {
                         PLTLExp trimOne = trueFalseTrim(exp);
+                        if(!exp.equals(trimOne))
+                            System.out.println("wow");
+
                         trimmed.add(andTrim(trimOne));
                     }
-                    ImplicantMap.put(fullTrim, trimmed);
+                    ImplicantMap.put(trimstr, trimmed);
                 }
-                implicants = ImplicantMap.get(fullTrim);
+                implicants = ImplicantMap.get(trimstr);
                 for (PLTLExp exp : implicants) {
                     addResult(result, exp, valuation);
                 }
@@ -156,55 +179,29 @@ public class Translator {
     }
 
     private PLTLExp translationActual(PLTLExp exp, LinkedHashSet<String> valuation){
-        for (Integer entry: prelimInputMap.keySet()) {
-
-            //if(exp.equals(prelimInputMap.get(entry))){
-            if(prelimInputMap.containsKey(entry)){
-                //int entry = prelimInputMap.get(exp);
-                if(prelimOutputMap.containsKey(entry)) {
-                    HashMap<String, PLTLExp> map = prelimOutputMap.get(entry);
-                    if(map.containsKey(key)){
-                        PLTLExp post = map.get(key);
-                        if(!(post instanceof True) && !(post instanceof False))
-                            post.obligation = exp.obligation;
-                        else
-                            post.obligation = -1;
-                        return post;
-                    }else{
-                        PLTLExp post = exp.accept(new LocalAfter(), valuation);
-                        if(!(post instanceof True) && !(post instanceof False))
-                            post.obligation = exp.obligation;
-                        else
-                            post.obligation = -1;
-                        map.put(key, post);
-                        prelimOutputMap.put(entry, map);
-                        return post;
-                    }
-                }
-                else{
-                    HashMap<String, PLTLExp> map = new HashMap<>();
-                    PLTLExp post = exp.accept(new LocalAfter(), valuation);
-                    if(!(post instanceof True) && !(post instanceof False))
-                        post.obligation = exp.obligation;
-                    else
-                        post.obligation = -1;
-                    map.put(key, post);
-                    prelimOutputMap.put(entry, map);
-                    return post;
-                }
-            }
+        if(!prelimInputMap.containsKey(exp.getString())) {
+            prelimInputMap.put(exp.getString(),prelimEntries);
+            prelimEntries += 1;
         }
-        prelimInputMap.put(prelimEntries, exp);
-        //prelimInputMap.put(exp,prelimEntries);
-        PLTLExp post = exp.accept(new LocalAfter(), valuation);
+        int entry = prelimInputMap.get(exp.getString());
+        if(!prelimOutputMap.containsKey(entry)) {
+            HashMap<String, PLTLExp> map = new HashMap<>();
+            prelimOutputMap.put(entry, map);
+        }
+        HashMap<String, PLTLExp> map = prelimOutputMap.get(entry);
+        if(!map.containsKey(key)) {
+            PLTLExp post = exp.accept(new LocalAfter(), valuation);
+            if(!(post instanceof True) && !(post instanceof False))
+                post.obligation = exp.obligation;
+            else
+                post.obligation = -1;
+            map.put(key, post);
+        }
+        PLTLExp post = map.get(key);
         if(!(post instanceof True) && !(post instanceof False))
             post.obligation = exp.obligation;
         else
             post.obligation = -1;
-        HashMap<String, PLTLExp> map = new HashMap<>();
-        map.put(key, post);
-        prelimOutputMap.put(prelimEntries, map);
-        prelimEntries += 1;
         return post;
     }
 
@@ -244,13 +241,13 @@ public class Translator {
             }
         }
         for (TranslationOutput out: target) {
-            if(out.getTo().equals(exp)) {
-                out.addVal(val);
-                out.addObs(clearedObs);
-                return;
-            }
+            if(out.getKey().equals(key))
+                if(out.getTo().equals(exp)) {
+                    out.addObs(clearedObs);
+                    return;
+                }
         }
-        TranslationOutput result = new TranslationOutput(exp, val);
+        TranslationOutput result = new TranslationOutput(exp, val, key);
         result.addObs(clearedObs);
         target.add(result);
     }
@@ -451,7 +448,7 @@ public class Translator {
         }
     }
 
-    void currentWeak(PLTLExp exp){
+    /*void currentWeak(PLTLExp exp){
         if(exp instanceof Unary){
             if(exp instanceof Yesterday){
                 currentlyWeak.put(exp.pastLabel, false);
@@ -471,7 +468,7 @@ public class Translator {
             currentWeak(((Binary)exp).getLeft());
             currentWeak(((Binary)exp).getRight());
         }
-    }
+    }*/
 
     void setupWC(int label, PLTLExp weak, PLTLExp strong){
         if(!WCPrelims.containsKey(label)){

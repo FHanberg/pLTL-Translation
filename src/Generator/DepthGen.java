@@ -153,7 +153,15 @@ public class DepthGen {
                 m_remainingLen -= 1;
             }
             if(current instanceof GenUnary u){
-                GenStructure target = GenFull(rollLogic,rollTerminal,rollPast,rollFuture);
+                GenStructure target;
+                while(true){
+                    target = GenFull(rollLogic,rollTerminal,rollPast,rollFuture);
+                    if(target instanceof GenUnary i){
+                        if(i.getType().equals(u.getType()))
+                            continue;
+                    }
+                    break;
+                }
                 u.setTarget(target);
                 target.localDepth = u.localDepth;
                 if(swap){

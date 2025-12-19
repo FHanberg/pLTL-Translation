@@ -9,6 +9,11 @@ public class Historically extends Unary {
     }
 
     @Override
+    public String getOp() {
+        return "H";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

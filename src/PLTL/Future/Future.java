@@ -8,6 +8,11 @@ public class Future extends PLTL.Unary {
     }
 
     @Override
+    public String getOp() {
+        return "F";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

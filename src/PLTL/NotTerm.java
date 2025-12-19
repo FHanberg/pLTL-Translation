@@ -18,6 +18,11 @@ public class NotTerm extends PLTLExp {
     }
 
     @Override
+    public String getString() {
+        return "!" + m_term;
+    }
+
+    @Override
     public boolean equals(Object obj){
         if(obj == null){
             return false;
@@ -29,5 +34,10 @@ public class NotTerm extends PLTLExp {
             return false;
         }
         return true;
+    }
+
+    @Override
+    public boolean dirtyEquals(PLTLExp target) {
+        return target instanceof NotTerm;
     }
 }

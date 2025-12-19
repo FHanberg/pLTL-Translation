@@ -8,6 +8,11 @@ public class Next extends PLTL.Unary {
     }
 
     @Override
+    public String getOp() {
+        return "X";
+    }
+
+    @Override
     public <R> R accept(Visitor<R> v) {
         return v.visit(this);
     }

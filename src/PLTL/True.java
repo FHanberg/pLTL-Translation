@@ -12,6 +12,11 @@ public class True extends PLTLExp{
     }
 
     @Override
+    public String getString() {
+        return "true";
+    }
+
+    @Override
     public boolean equals(Object obj){
         if(obj == null){
             return false;
@@ -20,5 +25,10 @@ public class True extends PLTLExp{
             return false;
         }
         return true;
+    }
+
+    @Override
+    public boolean dirtyEquals(PLTLExp target) {
+        return target instanceof True;
     }
 }
