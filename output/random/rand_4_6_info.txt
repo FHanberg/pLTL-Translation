@@ -1,2 +1,6 @@
 attempts=1
-time_elapsed=5ms
+time_elapsed_0=315ms
+time_elapsed_1=13316ms
+time_elapsed_2=-1ms
+time_elapsed_3=31ms
+time_elapsed_4=20490ms

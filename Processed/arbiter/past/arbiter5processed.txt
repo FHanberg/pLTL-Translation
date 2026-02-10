@@ -2,5 +2,5 @@ Acceptance:Inf(0)&Inf(1)&Inf(2)&Inf(3)&Inf(4)
  Number of sets:5 
  Number of states:17 
  initial states0 
- Atomic propositions: ga (=0) gb (=1) gc (=4) gd (=5) ge (=6) ra (=2) rb (=3) rc (=7) rd (=8) re (=9) 
+ Atomic propositions: ga (=0) gb (=1) gc (=2) gd (=3) ge (=4) ra (=5) rb (=6) rc (=7) rd (=8) re (=9) 
  

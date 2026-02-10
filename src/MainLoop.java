@@ -2,6 +2,7 @@ import PLTL.*;
 import PLTL.Future.*;
 import PLTL.Past.*;
 
+import javax.naming.TimeLimitExceededException;
 import java.util.*;
 import java.util.LinkedHashSet;
 
@@ -104,14 +105,14 @@ public class MainLoop {
                 result.add(new NBAAutomata(mainSet, transitionSet, atoms, t.getTransitionLabels()));
             }
         }else{
-            result.add(Process(input,"oops", optimize));
+            return null;
         }
 
         return result;
     }
 
 
-    public static NBAAutomata Process(PLTLExp input,String str, boolean optimize){
+    public static NBAAutomata Process(PLTLExp input,String str, boolean optimize) throws TimeLimitExceededException {
         //Initialization
         int stateLabel = 0;
 
@@ -137,11 +138,12 @@ public class MainLoop {
 
         Translator t = new Translator();
         boolean first = true;
+        long start = System.nanoTime();
         //Main loop of full translation
             while (!toBeChecked.isEmpty()) {
-                System.out.println("Current Set size: " + toBeChecked.size());
+                //System.out.println("Current Set size: " + toBeChecked.size());
                 NBAState node = toBeChecked.pop();
-                System.out.println("Current node: " + node.getExp().getString());
+                //System.out.println("Current node: " + node.getExp().getString());
                 int curLabel = node.m_label;
                 if(first){
                     first = false;
@@ -151,6 +153,9 @@ public class MainLoop {
                 LinkedList<TranslationOutput> prospective = t.translationStep(node, atoms, optimize);
                 //For each primary implicant:
                 for (TranslationOutput out: prospective) {
+                    long time = System.nanoTime();
+                    if((time - start) / 1000000 > 60000)
+                        throw new TimeLimitExceededException("translation timeout: " + (time - start) / 1000000 + "ms");
                     NBAState next = new NBAState(out.getTo());
                     //Determine if the main set already has an equal state, and return its label
                     int equalLabel = getLabelOfEqual(out.getTo(), mainSet);
@@ -199,6 +204,10 @@ public class MainLoop {
 
                     }
                 }
+
+                long time = System.nanoTime();
+                if((time - start) / 1000000 > 60000)
+                    throw new TimeLimitExceededException("translation timeout");
             }
         for (HashMap<String, LinkedList<NBATransition>> map: transitionSet.values()) {
             for (LinkedList<NBATransition> tr: map.values()) {
